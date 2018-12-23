@@ -347,7 +347,8 @@ static int voltageDetectionCounter=0;
           break;
 
         case Cc:    // initialice Constant Current
-          refoutvalue = chargeCurrent/mAPerinc;         // constant current als long as voltage is lower than the limit        
+          refoutvalue = chargeCurrent/mAPerinc;         // constant current als long as voltage is lower than the limit   
+          actLiPoState = CC;     
           break;
         case CC:
           // closed loop current control
