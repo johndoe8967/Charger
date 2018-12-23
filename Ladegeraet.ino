@@ -168,15 +168,26 @@ void setup() {
 //******************************************
 // print status e.g. during charging
 //******************************************
+const char *message = 0;
 void printStatus () {
-  lcd.noBlink();
-  printTime(0, 0);
-  
+static int messagedelay=0;
+  messagedelay++;
+  if ((messagedelay/4)%2) {
+    printTime(0, 0);    
+  } else {
+    if (message != 0) {
+      lcd.setCursor(0, 0);
+      lcd.print("                ");
+      lcd.setCursor(0, 0);
+      lcd.print(message);
+    }
+  }
   lcd.setCursor(0, 1);
   lcd.print(cellVoltage);
   lcd.print("mV  ");
   lcd.print(int(sensorValueI*a));
-  lcd.print("mA  ");
+  lcd.print("mA  ");  
+  lcd.noBlink();
 }
 
 //******************************************
@@ -259,12 +270,12 @@ void setChargeCurrent() {
 void initCharging() {
   actLiPoState=CHECK;
   delayCounter = 0;  
+  message=0;
 }
 //******************************************
 // calculate charge current 
 //  each type has an individual calculation
 //******************************************
-
 void calcChargeCurrent() {
   switch (actType) {
     case NiCd:
@@ -317,6 +328,7 @@ void calcChargeCurrent() {
           break;
         case FULL:
           refoutvalue = 0;
+          message = "LiPo FULL       ";
           break;
       }
       break;
