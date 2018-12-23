@@ -1,5 +1,3 @@
-#include <SmoothADC.h>
-
 /*
   Ladegerät für NiMh, LiPo cells with various number of cells and capacity
   3 differnt type of charging
@@ -28,9 +26,7 @@
 
 // include the library code:
 #include <LiquidCrystal.h>
-
-
-
+#include <SmoothADC.h>
 
 // initialize the library by associating any needed LCD interface pin
 // with the arduino pin number it is connected to
@@ -57,7 +53,6 @@ enum MenuState {
 };
   MenuState menuState = Type;
 
-  
 enum Types {
   NiCd=0, NiMh=1, LiPo=2, LASTTYPESTATE=3
 };
@@ -84,8 +79,6 @@ const int maxConstCurrentVoltageLiPo = 4200;
 const int fractionOfSecond = 2;
 
 const char *message = 0;
-  
-  int i = 0;
 
 //******************************************
 //  button related functions and variables
