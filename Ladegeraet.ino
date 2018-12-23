@@ -87,7 +87,7 @@ static LiPoState actLiPoState = WAIT;
   int runtimeMinutes = 0;
 const int fractionOfSecond = 2;
 
-const char *message = 0;
+const char *message = 0;        // pointer to const string for message display
 
 //******************************************
 //  button related functions and variables
