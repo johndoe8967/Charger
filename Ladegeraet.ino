@@ -269,7 +269,7 @@ void calcChargeCurrent() {
       }
       break;
   }
-  if (runtimeMinutes == 4*60) 
+  if (runtimeMinutes >= maxRuntime) 
   {
     refoutvalue = 0;
   }
