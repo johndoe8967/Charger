@@ -308,6 +308,9 @@ void calcChargeCurrent() {
               refoutvalue = chargeCurrent/mAPerinc;
             }
           }
+          if (refoutvalue == 0) {                       // no more charging... 
+            actLiPoState = FULL;
+          }
           if (cellVoltage > maxCellVoltageLiPo) {       // detect end of charge
             actLiPoState = FULL;
           }
