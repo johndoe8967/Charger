@@ -334,6 +334,12 @@ static int voltageDetectionCounter=0;
           if (cellCurrent > (chargeCurrent+5)) {
             refoutvalue--;
           }
+
+          if ((refoutvalue*mAPerinc - chargeCurrent) > 200) {   // terminate charge is set current is 200mA above charge current
+            refoutvalue = 0;
+            message = "Current ERROR   ";
+            actLiPoState = WAIT;
+          }
           if (cellVoltage > maxConstCurrentVoltageLiPo) {   
             voltageDetectionCounter++;
             if (voltageDetectionCounter > (10*fractionOfSecond)) {
