@@ -117,7 +117,10 @@ void processButtons () {
   buttonDec = !digitalRead(buttonDecPin);
 
   if (buttonMode || buttonInc || buttonDec) {
-    message = 0;
+    if (message != 0) {
+      message = 0;
+      return;             // ignore button for 1 cycle to reset message without value change    
+    }
   }
   
   if (!charging) {
