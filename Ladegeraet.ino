@@ -328,10 +328,10 @@ static int voltageDetectionCounter=0;
           refoutvalue = chargeCurrent/mAPerinc;         // constant current als long as voltage is lower than the limit        
           break;
         case CC:
-          if (cellCurrent < (chargeCurrent-10)) {
+          if (cellCurrent < (chargeCurrent-5)) {
             refoutvalue++;
           }
-          if (cellCurrent > (chargeCurrent+10)) {
+          if (cellCurrent > (chargeCurrent+5)) {
             refoutvalue--;
           }
           if (cellVoltage > maxConstCurrentVoltageLiPo) {   
