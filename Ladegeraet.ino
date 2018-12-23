@@ -68,7 +68,6 @@ const int limitRuntime = 16*60;
   
   int refoutvalue = 600/mAPerinc;// (I[mA]/3,94)  
   
-const int checkCurrentLiPo = 10;
 const int maxCellVoltageLiPo = 4230;
 const int maxConstCurrentVoltageLiPo = 4200;
       int cellVoltage  = 0;
@@ -309,7 +308,7 @@ void calcChargeCurrent() {
     case LiPo:
       switch (actLiPoState) {
         case CHECK:
-          refoutvalue = checkCurrentLiPo/mAPerinc;
+          refoutvalue = (chargeCurrent/mAPerinc)/10;  // min charge current is 10% of rated charge current
           delayCounter++;
           if (delayCounter >= fractionOfSecond*10) {  // delay for 10 seconds
             delayCounter = 0;   
@@ -341,7 +340,7 @@ void calcChargeCurrent() {
               refoutvalue = chargeCurrent/mAPerinc;
             }
           }
-          if (refoutvalue < chargeCurrent/mAPerinc/10) { // stop charging at 10% of initial charge current
+          if (refoutvalue < ((chargeCurrent/mAPerinc)/10)) { // stop charging at 10% of initial charge current
             actLiPoState = FULL;
           }
           if (cellVoltage > maxCellVoltageLiPo) {       // detect end of charge
