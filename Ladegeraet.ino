@@ -299,6 +299,7 @@ void initCharging() {
 //  each type has an individual calculation
 //******************************************
 void calcChargeCurrent() {
+static int voltageDetectionCounter=0;  
   switch (actType) {
     case NiCd:
       refoutvalue = chargeCurrent/mAPerinc;          // constant charge current during complete time
@@ -334,7 +335,13 @@ void calcChargeCurrent() {
             refoutvalue--;
           }
           if (cellVoltage > maxConstCurrentVoltageLiPo) {   
-            actLiPoState = CV;
+            voltageDetectionCounter++;
+            if (voltageDetectionCounter > (10*fractionOfSecond)) {
+              actLiPoState = CV;
+              voltageDetectionCounter = 0;
+            }
+          }else {
+            voltageDetectionCounter = 0;
           }          
           break;
         case CV:
@@ -353,7 +360,13 @@ void calcChargeCurrent() {
             actLiPoState = FULL;
           }
           if (cellVoltage > maxCellVoltageLiPo) {       // detect end of charge
-            actLiPoState = FULL;
+            voltageDetectionCounter++;
+            if (voltageDetectionCounter > (10*fractionOfSecond)) {
+              actLiPoState = FULL;
+              voltageDetectionCounter = 0;          
+            }
+          }else {
+            voltageDetectionCounter = 0;          
           }
           break;
         case FULL:
