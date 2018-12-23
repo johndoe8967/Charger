@@ -77,6 +77,8 @@ const int maxConstCurrentVoltageLiPo = 4100;
 
   int runtimeMinutes = 0;
 const int fractionOfSecond = 2;
+
+const char *message = 0;
   
   int i = 0;
 
@@ -106,50 +108,57 @@ void processButtons () {
   buttonMode = !digitalRead(buttonModePin);
   buttonInc = !digitalRead(buttonIncPin);
   buttonDec = !digitalRead(buttonDecPin);
+
+  if (buttonMode || buttonInc || buttonDec) {
+    message = 0;
+  }
   
-  if (buttonMode == true) {
-    menuState=(MenuState)((int)menuState+1);
-    if (menuState == LASTMENUSTATE) menuState=Type;
+  if (!charging) {
+    if (buttonMode == true) {
+      menuState=(MenuState)((int)menuState+1);
+      if (menuState == LASTMENUSTATE) menuState=Type;
+    }
+  
+    if (buttonInc == true) {
+      switch (menuState) {
+        case Type:
+          if (actType < LiPo) {
+            actType =(Types)((int)actType+1);
+          }
+          break;
+        case Current:
+          chargeCurrent = chargeCurrent+10;
+          if (chargeCurrent > limitCurrent) chargeCurrent = limitCurrent;
+          break;
+        case Time:
+          maxRuntime++;
+          if (maxRuntime > limitRuntime) maxRuntime = limitRuntime;
+          break;
+        default:
+          break;
+      }
+    }
+    if (buttonDec == true) {
+      switch (menuState) {
+        case Type:
+          if (actType > NiCd) {
+            actType =(Types)((int)actType-1);
+          }
+          break;
+        case Current:
+          chargeCurrent = chargeCurrent-10;
+          if (chargeCurrent < 0) chargeCurrent = 0;
+          break;
+        case Time:
+          maxRuntime--;
+          if (maxRuntime < 0) maxRuntime = 0;
+          break;
+        default:
+          break;
+      }
+    }
   }
 
-  if (buttonInc == true) {
-    switch (menuState) {
-      case Type:
-        if (actType < LiPo) {
-          actType =(Types)((int)actType+1);
-        }
-        break;
-      case Current:
-        chargeCurrent = chargeCurrent+10;
-        if (chargeCurrent > limitCurrent) chargeCurrent = limitCurrent;
-        break;
-      case Time:
-        maxRuntime++;
-        if (maxRuntime > limitRuntime) maxRuntime = limitRuntime;
-        break;
-      default:
-        break;
-    }
-  }
-  if (buttonDec == true) {
-    switch (menuState) {
-      case Type:
-        if (actType > NiCd) {
-          actType =(Types)((int)actType-1);
-        }
-        break;
-      case Current:
-        chargeCurrent = chargeCurrent-10;
-        if (chargeCurrent < 0) chargeCurrent = 0;
-        break;
-      case Time:
-        maxRuntime--;
-        if (maxRuntime < 0) maxRuntime = 0;
-        break;
-      default:
-        break;
-    }
-  }
 }
 
 //******************************************
@@ -167,15 +176,12 @@ void setup() {
 }
 
 //******************************************
-// print status e.g. during charging
+// print message
 //******************************************
-const char *message = 0;
-void printStatus () {
+void printMessage() {
 static int messagedelay=0;
   messagedelay++;
-  if ((messagedelay/fractionOfSecond)%2) {
-    printTime(0, 0);    
-  } else {
+  if ((messagedelay/fractionOfSecond)%2) {  
     if (message != 0) {
       lcd.setCursor(0, 0);
       lcd.print("                ");
@@ -183,6 +189,12 @@ static int messagedelay=0;
       lcd.print(message);
     }
   }
+}
+//******************************************
+// print status e.g. during charging
+//******************************************
+void printStatus () {
+  printTime(0, 0);    
   lcd.setCursor(0, 1);
   lcd.print(cellVoltage);
   lcd.print("mV  ");
@@ -272,7 +284,6 @@ void setChargeCurrent() {
 void initCharging() {
   actLiPoState=CHECK;
   delayCounter = 0;  
-  message=0;
 }
 //******************************************
 // calculate charge current 
@@ -430,6 +441,7 @@ void loop() {
   } else {
     printMenu(menuState);
   }
+  printMessage();
   
   delay(1000/fractionOfSecond);     
 }
