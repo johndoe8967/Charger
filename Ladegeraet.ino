@@ -293,6 +293,7 @@ void setChargeCurrent() {
 void initCharging() {
   actLiPoState=CHECK;
   delayCounter = 0;  
+  runtimeMinutes = 0;
 }
 //******************************************
 // calculate charge current 
