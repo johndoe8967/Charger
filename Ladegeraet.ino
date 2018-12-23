@@ -71,8 +71,8 @@ const int limitRuntime = 16*60;
   int sensorValueU = 0;
   
 const int checkCurrentLiPo = 10;
-const int maxCellVoltageLiPo = 4200;
-const int maxConstCurrentVoltageLiPo = 4100;
+const int maxCellVoltageLiPo = 4220;
+const int maxConstCurrentVoltageLiPo = 4200;
       int cellVoltage  = 0;
 
   int runtimeMinutes = 0;
