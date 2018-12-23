@@ -233,16 +233,22 @@ void printStatus () {
 const char typeString[3][5] = {"NiCd","NiMh","LiPo"};
 void printMenu (MenuState menuState) {
   lcd.setCursor(0, 0);
-  lcd.print("Typ, Strom, Zeit");
+  lcd.print("Typ, Strom, Zeit");              // complete reprint 1st line of menu
   lcd.setCursor(0, 1);
-  lcd.print(typeString[actType]);
-  lcd.print("      ");
+  lcd.print("                ");              // clear 2nd line of menu
+  lcd.setCursor(0, 1);
+  lcd.print(typeString[actType]);             // print celltype
+  
   lcd.setCursor(5, 1);
-  lcd.print(chargeCurrent);
-  lcd.setCursor(12, 1);
-  lcd.print("    ");
-  lcd.setCursor(12, 1);
-  lcd.print(maxRuntime);  
+  if (chargeCurrent < 100) lcd.print(" ");    // align chargecurrent
+  if (chargeCurrent < 1000) lcd.print(" ");
+  if (chargeCurrent < 10000) lcd.print(" "); 
+  lcd.print(chargeCurrent);                   // print chargecurrent
+  
+  lcd.setCursor(12, 1); 
+  if (maxRuntime < 100) lcd.print(" ");       // align max runtime
+  if (maxRuntime < 1000) lcd.print(" ");
+  lcd.print(maxRuntime);                      // print max runtime
 
   // set blinking cursor at the end of the value
   int cursorpos = 0;
