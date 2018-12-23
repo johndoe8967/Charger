@@ -75,6 +75,7 @@ const int maxConstCurrentVoltageLiPo = 4200;
 
 enum LiPoState {
   CHECK=0,
+  Cc,
   CC,
   CV,
   FULL,
@@ -205,7 +206,7 @@ static int messagedelay=0;
 //******************************************
 // print status e.g. during charging
 //******************************************
-const char LiPoStateString[5][3] = {"Ch","CC","CV","FU","Wa"};
+const char LiPoStateString[6][3] = {"Ch","Cc","CC","CV","FU","Wa"};
 void printStatus () {
   
   printTime(0, 0);    
@@ -313,7 +314,7 @@ void calcChargeCurrent() {
           if (delayCounter >= fractionOfSecond*10) {  // delay for 10 seconds
             delayCounter = 0;   
             if (cellVoltage < maxConstCurrentVoltageLiPo) {
-              actLiPoState = CC;
+              actLiPoState = Cc;
             } else if (cellVoltage < maxCellVoltageLiPo) {
               actLiPoState = CV;
             } else {
@@ -321,8 +322,17 @@ void calcChargeCurrent() {
             }         
           }
           break;
+
+        case Cc:    // initialice Constant Current
+          refoutvalue = chargeCurrent/mAPerinc;         // constant current als long as voltage is lower than the limit        
+          break;
         case CC:
-          refoutvalue = chargeCurrent/mAPerinc;         // constant current als long as voltage is lower than the limit
+          if (cellCurrent < (chargeCurrent-10)) {
+            refoutvalue++;
+          }
+          if (cellCurrent > (chargeCurrent+10)) {
+            refoutvalue--;
+          }
           if (cellVoltage > maxConstCurrentVoltageLiPo) {   
             actLiPoState = CV;
           }          
