@@ -314,8 +314,7 @@ void calcChargeCurrent() {
             delayCounter = 0;   
             if (cellVoltage < maxConstCurrentVoltageLiPo) {
               actLiPoState = CC;
-            }
-            if (cellVoltage < maxCellVoltageLiPo) {
+            } else if (cellVoltage < maxCellVoltageLiPo) {
               actLiPoState = CV;
             } else {
               actLiPoState = FULL;
