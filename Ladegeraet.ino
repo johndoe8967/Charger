@@ -41,7 +41,7 @@ SmoothADC    ADC_0;        // SmoothADC instance for voltage
 SmoothADC    ADC_1;        // SmoothADC instance for current
 
 
-const float mAPerinc = 3.94;
+const float mAPerinc = 4.18;
 const float n = 22.24;      // (22,1=Spannungsteiler*Uref);
 const float a = 1.08;
 
