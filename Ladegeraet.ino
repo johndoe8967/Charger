@@ -274,10 +274,10 @@ static int delayCounter = 0;
 // calculate cellvoltage by subtracting drop on current measurement
 //******************************************
 void getChargeState () {
-  int sensorValueU = ADC_0.getADCVal();
+  int sensorValueU = ADC_0.getADCVal();                 // get smoothed ADC values
   int sensorValueI = ADC_1.getADCVal();
-  cellCurrent = sensorValueI*a;
-  cellVoltage = int(sensorValueU*n-cellCurrent);
+  cellCurrent = sensorValueI*a;                         // increments to mA
+  cellVoltage = int(sensorValueU*n-cellCurrent);        // increments to mV
 }
 
 //******************************************
@@ -314,11 +314,12 @@ static int voltageDetectionCounter=0;
           delayCounter++;
           if (delayCounter >= fractionOfSecond*10) {  // delay for 10 seconds
             delayCounter = 0;   
-            if (cellVoltage < maxConstCurrentVoltageLiPo) {
+            
+            if (cellVoltage < maxConstCurrentVoltageLiPo) {       // cell is empty -> switch to constant current
               actLiPoState = Cc;
-            } else if (cellVoltage < maxCellVoltageLiPo) {
+            } else if (cellVoltage < maxCellVoltageLiPo) {        // cell nearly full -> switch to constant voltage
               actLiPoState = CV;
-            } else {
+            } else {                                              // cell full -> switch end of charge
               actLiPoState = FULL;
             }         
           }
@@ -328,25 +329,27 @@ static int voltageDetectionCounter=0;
           refoutvalue = chargeCurrent/mAPerinc;         // constant current als long as voltage is lower than the limit        
           break;
         case CC:
-          if (cellCurrent < (chargeCurrent-5)) {
+          // closed loop current control
+          if (cellCurrent < (chargeCurrent-5)) {                // increment current output if measurement is below charge current
             refoutvalue++;
           }
-          if (cellCurrent > (chargeCurrent+5)) {
+          if (cellCurrent > (chargeCurrent+5)) {                // decrement current output if measurement is above charge current 
             refoutvalue--;
           }
 
           if ((refoutvalue*mAPerinc - chargeCurrent) > 200) {   // terminate charge is set current is 200mA above charge current
-            refoutvalue = 0;
-            message = "Current ERROR   ";
-            actLiPoState = WAIT;
+            refoutvalue = 0;                                    // switch of current output
+            message = "Current ERROR   ";                       // set message for display
+            actLiPoState = WAIT;                                // switch to WAIT state
           }
-          if (cellVoltage > maxConstCurrentVoltageLiPo) {   
-            voltageDetectionCounter++;
+          
+          if (cellVoltage > maxConstCurrentVoltageLiPo) {           // detect state change because cellVoltage above constant current limit
+            voltageDetectionCounter++;                              // delay state change 10s 
             if (voltageDetectionCounter > (10*fractionOfSecond)) {
-              actLiPoState = CV;
-              voltageDetectionCounter = 0;
+              actLiPoState = CV;                                    // next state constant voltage
+              voltageDetectionCounter = 0;                          // reset delay counter for next usage
             }
-          }else {
+          }else {                                                   // reset state change because voltage to low again
             voltageDetectionCounter = 0;
           }          
           break;
@@ -365,20 +368,20 @@ static int voltageDetectionCounter=0;
           if (refoutvalue < ((chargeCurrent/mAPerinc)/10)) { // stop charging at 10% of initial charge current
             actLiPoState = FULL;
           }
-          if (cellVoltage > maxCellVoltageLiPo) {       // detect end of charge
-            voltageDetectionCounter++;
+          if (cellVoltage > maxCellVoltageLiPo) {                   // detect end of charge bewcause cellVoltage above max cell voltage
+            voltageDetectionCounter++;                              // delay state change 10s 
             if (voltageDetectionCounter > (10*fractionOfSecond)) {
-              actLiPoState = FULL;
-              voltageDetectionCounter = 0;          
+              actLiPoState = FULL;                                  // next state FULL
+              voltageDetectionCounter = 0;                          // reset delay counter for next usage          
             }
-          }else {
+          }else {                                                   // reset state change because voltage to low again
             voltageDetectionCounter = 0;          
           }
           break;
         case FULL:
-          refoutvalue = 0;
-          message = "LiPo FULL       ";
-          actLiPoState = WAIT;
+          refoutvalue = 0;                                          // switch of current
+          message = "LiPo FULL       ";                             // set message for display
+          actLiPoState = WAIT;                                      // next state WAIT
           break;
         case WAIT:
           break;
