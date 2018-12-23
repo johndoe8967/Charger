@@ -42,7 +42,7 @@ SmoothADC    ADC_1;        // SmoothADC instance for current
 
 
 const float mAPerinc = 3.94;
-const float n = 22.1;// (22,1=Spannungsteiler*Uref);
+const float n = 22.24;      // (22,1=Spannungsteiler*Uref);
 const float a = 1.08;
 
 enum MenuState {
@@ -75,6 +75,16 @@ const int maxCellVoltageLiPo = 4230;
 const int maxConstCurrentVoltageLiPo = 4200;
       int cellVoltage  = 0;
 
+enum LiPoState {
+  CHECK=0,
+  CC,
+  CV,
+  FULL,
+  WAIT
+  };
+
+static LiPoState actLiPoState = WAIT;
+      
   int runtimeMinutes = 0;
 const int fractionOfSecond = 2;
 
@@ -197,13 +207,15 @@ static int messagedelay=0;
 //******************************************
 // print status e.g. during charging
 //******************************************
+const char LiPoStateString[5][3] = {"Ch","CC","CV","FU","Wa"};
 void printStatus () {
   printTime(0, 0);    
   lcd.setCursor(0, 1);
-  lcd.print(cellVoltage);
-  lcd.print("mV  ");
-  lcd.print(int(sensorValueI*a));
-  lcd.print("mA  ");  
+  lcd.print(cellVoltage);                   // up to  5 char
+  lcd.print("mV");                          //        2 char
+  lcd.print(int(sensorValueI*a));           // up to  4 char
+  lcd.print("mA ");                         //        3 char
+  lcd.print(LiPoStateString[actLiPoState]); //        2 char
   lcd.noBlink();
 }
 
@@ -247,14 +259,6 @@ void printMenu (MenuState menuState) {
 //******************************************
 // Charge related functions and variables
 //******************************************
-enum LiPoState {
-  CHECK=0,
-  CC,
-  CV,
-  FULL,
-  WAIT
-  };
-static LiPoState actLiPoState = WAIT;
 static int delayCounter = 0;
 
 //******************************************
