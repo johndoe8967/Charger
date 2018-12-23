@@ -189,6 +189,7 @@ void setup() {
   pinMode(refout, OUTPUT);
   
   initButtons();
+  printSplash();
 }
 
 //******************************************
@@ -206,6 +207,16 @@ static int messagedelay=0;
     }
   }
 }
+//******************************************
+// print splash
+//******************************************
+void printSplash () {
+  lcd.setCursor(0, 0);
+  lcd.print("Batteryloader   ");
+  lcd.setCursor(0, 1);
+  lcd.print("max 19Vac V01.00");
+}
+
 //******************************************
 // print status e.g. during charging
 //******************************************
@@ -471,6 +482,7 @@ void printTime(int col, int row) {
 //******************************************
 void loop() {
 static int count = 0;
+static int delayMenu = 10*fractionOfSecond;            // delay 10s to show splash
   ADC_0.serviceADCPin();
   ADC_1.serviceADCPin();
 
@@ -490,13 +502,17 @@ static int count = 0;
         charging = true;              
       }
     }
-    
-    if(charging == true)              // show status or menu depending on charging state 
-    {
-      printStatus();
-      calcRunTime();
+
+    if (delayMenu > 0) {
+      delayMenu--;
     } else {
-      printMenu(menuState);
+      if(charging == true)              // show status or menu depending on charging state 
+      {
+        printStatus();
+        calcRunTime();
+      } else {
+        printMenu(menuState);
+      }    
     }
     printMessage();    
   }
