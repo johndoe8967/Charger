@@ -76,6 +76,7 @@ const int maxConstCurrentVoltageLiPo = 4100;
       int cellVoltage  = 0;
 
   int runtimeMinutes = 0;
+const int fractionOfSecond = 2;
   
   int i = 0;
 
@@ -172,7 +173,7 @@ const char *message = 0;
 void printStatus () {
 static int messagedelay=0;
   messagedelay++;
-  if ((messagedelay/4)%2) {
+  if ((messagedelay/fractionOfSecond)%2) {
     printTime(0, 0);    
   } else {
     if (message != 0) {
@@ -290,7 +291,7 @@ void calcChargeCurrent() {
         case CHECK:
           refoutvalue = checkCurrentLiPo/mAPerinc;
           delayCounter++;
-          if (delayCounter >= 40) {
+          if (delayCounter >= fractionOfSecond*10) {  // delay for 10 seconds
             delayCounter = 0;   
             if (cellVoltage < maxConstCurrentVoltageLiPo) {
               actLiPoState = CC;
@@ -438,5 +439,5 @@ void loop() {
   }
   
   
-  delay(500);
+  delay(1000/fractionOfSecond);
 }
