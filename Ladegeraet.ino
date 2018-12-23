@@ -70,8 +70,9 @@ const int limitRuntime = 16*60;
   int sensorValueI = 0;
   int sensorValueU = 0;
   
-const int maxCellVoltage = 4200;
-const int maxConstCurrentVoltage = 4100;
+const int checkCurrentLiPo = 10;
+const int maxCellVoltageLiPo = 4200;
+const int maxConstCurrentVoltageLiPo = 4100;
       int cellVoltage  = 0;
 
   int runtimeMinutes = 0;
@@ -225,6 +226,7 @@ enum LiPoState {
   FULL
   };
 static LiPoState actLiPoState;
+static int delayCounter = 0;
 
 //******************************************
 // measure voltage and current
@@ -255,7 +257,8 @@ void setChargeCurrent() {
 // initialize charging 
 //******************************************
 void initCharging() {
-  actLiPoState=CHECK;  
+  actLiPoState=CHECK;
+  delayCounter = 0;  
 }
 //******************************************
 // calculate charge current 
@@ -273,28 +276,41 @@ void calcChargeCurrent() {
     case LiPo:
       switch (actLiPoState) {
         case CHECK:
+          refoutvalue = checkCurrentLiPo/mAPerinc;
+          delayCounter++;
+          if (delayCounter >= 40) {
+            delayCounter = 0;   
+            if (cellVoltage < maxConstCurrentVoltageLiPo) {
+              actLiPoState = CC;
+            }
+            if (cellVoltage < maxCellVoltageLiPo) {
+              actLiPoState = CV;
+            } else {
+              actLiPoState = FULL;
+            }         
+          }
           break;
         case CC:
           refoutvalue = chargeCurrent/mAPerinc;        // constant current als long as voltage is lower than the limit
-          if (cellVoltage > maxConstCurrentVoltage) {   
+          if (cellVoltage > maxConstCurrentVoltageLiPo) {   
             actLiPoState = CV;
           }          
           break;
         case CV:
-          if (cellVoltage > (maxConstCurrentVoltage + 10)) {
+          if (cellVoltage > (maxConstCurrentVoltageLiPo + 10)) {
             refoutvalue--;                      // reduce charge current
             if (refoutvalue < 0)
             {
               refoutvalue=0;
             }
           }
-          if (cellVoltage < (maxConstCurrentVoltage - 10)) {
+          if (cellVoltage < (maxConstCurrentVoltageLiPo - 10)) {
             refoutvalue++;
             if (refoutvalue > chargeCurrent/mAPerinc) {
               refoutvalue = chargeCurrent/mAPerinc;
             }
           }
-          if (cellVoltage > maxCellVoltage) {
+          if (cellVoltage > maxCellVoltageLiPo) {
             actLiPoState = FULL;
           }
           break;
