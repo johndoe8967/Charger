@@ -66,7 +66,7 @@ const int limitRuntime = 16*60;
       
   bool charging = false;
   
-  int refoutvalue = 600/mAPerinc;// (I[mA]/3,94)  
+  int refoutvalue = 100/mAPerinc;// (I[mA]/3,94)  
   
 const int maxCellVoltageLiPo = 4230;
 const int maxConstCurrentVoltageLiPo = 4200;
@@ -428,6 +428,12 @@ byte minutes ;
 byte hours ;
 
 //******************************************
+// init time measument with actual millis
+//******************************************
+void initRunTime() {
+  previousTime = millis();
+}
+//******************************************
 // calcRunTime in seconds, minutes and hours
 //******************************************
 void calcRunTime() {
@@ -506,6 +512,7 @@ static int delayMenu = 10*fractionOfSecond;            // delay 10s to show spla
 
     if (delayMenu > 0) {
       delayMenu--;
+      initRunTime();
     } else {
       if(charging == true)              // show status or menu depending on charging state 
       {
@@ -513,6 +520,7 @@ static int delayMenu = 10*fractionOfSecond;            // delay 10s to show spla
         calcRunTime();
       } else {
         printMenu(menuState);
+        initRunTime();
       }    
     }
     printMessage();    
