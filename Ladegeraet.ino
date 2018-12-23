@@ -41,7 +41,8 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 const int refout = 9;
 const int sensorPinI = A0;
 const int sensorPinU = A1;
-SmoothADC    ADC_0;        // SmoothADC instance for Pin 1  
+SmoothADC    ADC_0;        // SmoothADC instance for voltage
+SmoothADC    ADC_1;        // SmoothADC instance for current
 
 
 const float mAPerinc = 3.94;
@@ -175,8 +176,10 @@ void setup() {
   //interne Referenz 1,082V
   analogReference(INTERNAL);
 
-  ADC_0.init(A1, TB_MS, 50);  // Init ADC0 attached to A0 with a 50ms acquisition period
+  ADC_0.init(sensorPinU, TB_MS, 50);  // Init ADC0 attached to A0 with a 50ms acquisition period
   if (ADC_0.isDisabled()) { ADC_0.enable(); }
+  ADC_1.init(sensorPinI, TB_MS, 50);  // Init ADC0 attached to A0 with a 50ms acquisition period
+  if (ADC_1.isDisabled()) { ADC_1.enable(); }
   
   pinMode(refout, OUTPUT);
   
@@ -270,14 +273,15 @@ const int numberOfAverages = 20;
 void getChargeState () {
   sensorValueU = 0;
   sensorValueI = 0;
-  for (int i=0; i < numberOfAverages; i++)
-  {
+//  for (int i=0; i < numberOfAverages; i++)
+//  {
 //    sensorValueU = (sensorValueU + analogRead(sensorPinU));
-    sensorValueI = (sensorValueI + analogRead(sensorPinI));
-  }  
+//    sensorValueI = (sensorValueI + analogRead(sensorPinI));
+//  }  
 //  sensorValueU = (sensorValueU)/numberOfAverages;
   sensorValueU = ADC_0.getADCVal();
-  sensorValueI = (sensorValueI)/numberOfAverages;
+//  sensorValueI = (sensorValueI)/numberOfAverages;
+  sensorValueI = ADC_1.getADCVal();
   cellVoltage = int(sensorValueU*n-sensorValueI*a);
 }
 
@@ -433,6 +437,7 @@ void printTime(int col, int row) {
 void loop() {
 static int count = 0;
   ADC_0.serviceADCPin();
+  ADC_1.serviceADCPin();
 
   count++;
   if ((count%10)==0) {
