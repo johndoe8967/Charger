@@ -435,7 +435,7 @@ static int count = 0;
   ADC_0.serviceADCPin();
 
   count++;
-  if (count%10) {
+  if ((count%10)==0) {
     getChargeState();                 // read analog values and calculate cell values
     calcChargeCurrent();              // calculate charge current and state
     setChargeCurrent();               // output charge current
