@@ -1,3 +1,5 @@
+#include <SmoothADC.h>
+
 /*
   Ladegerät für NiMh, LiPo cells with various number of cells and capacity
   3 differnt type of charging
@@ -39,6 +41,8 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 const int refout = 9;
 const int sensorPinI = A0;
 const int sensorPinU = A1;
+SmoothADC    ADC_0;        // SmoothADC instance for Pin 1  
+
 
 const float mAPerinc = 3.94;
 const float n = 22.1;// (22,1=Spannungsteiler*Uref);
@@ -170,6 +174,10 @@ void setup() {
 
   //interne Referenz 1,082V
   analogReference(INTERNAL);
+
+  ADC_0.init(A1, TB_MS, 50);  // Init ADC0 attached to A0 with a 50ms acquisition period
+  if (ADC_0.isDisabled()) { ADC_0.enable(); }
+  
   pinMode(refout, OUTPUT);
   
   initButtons();
@@ -258,16 +266,17 @@ static int delayCounter = 0;
 // improve accuracy by measuring 10 times and average it
 // calculate cellvoltage by subtracting drop on current measurement
 //******************************************
-const int numberOfAverages = 10;
+const int numberOfAverages = 20;
 void getChargeState () {
   sensorValueU = 0;
   sensorValueI = 0;
   for (int i=0; i < numberOfAverages; i++)
   {
-    sensorValueU = (sensorValueU + analogRead(sensorPinU));
+//    sensorValueU = (sensorValueU + analogRead(sensorPinU));
     sensorValueI = (sensorValueI + analogRead(sensorPinI));
   }  
-  sensorValueU = (sensorValueU)/numberOfAverages;
+//  sensorValueU = (sensorValueU)/numberOfAverages;
+  sensorValueU = ADC_0.getADCVal();
   sensorValueI = (sensorValueI)/numberOfAverages;
   cellVoltage = int(sensorValueU*n-sensorValueI*a);
 }
@@ -422,30 +431,35 @@ void printTime(int col, int row) {
 // main loop
 //******************************************
 void loop() {
+static int count = 0;
+  ADC_0.serviceADCPin();
 
-  getChargeState();                 // read analog values and calculate cell values
-  calcChargeCurrent();              // calculate charge current and state
-  setChargeCurrent();               // output charge current
-
-  processButtons();                 // read and process buttons
-
-  if (sensorValueI == 0) {          // check charging depending on current flow to detect a cell
-    charging = false;
-  } else {
-    if (charging == false) {        // check for start of charging positive edge
-      initCharging();               // init charging state
-      charging = true;              
+  count++;
+  if (count%10) {
+    getChargeState();                 // read analog values and calculate cell values
+    calcChargeCurrent();              // calculate charge current and state
+    setChargeCurrent();               // output charge current
+  
+    processButtons();                 // read and process buttons
+  
+    if (sensorValueI == 0) {          // check charging depending on current flow to detect a cell
+      charging = false;
+    } else {
+      if (charging == false) {        // check for start of charging positive edge
+        initCharging();               // init charging state
+        charging = true;              
+      }
     }
+    
+    if(charging == true)              // show status or menu depending on charging state 
+    {
+      printStatus();
+      calcRunTime();
+    } else {
+      printMenu(menuState);
+    }
+    printMessage();    
   }
   
-  if(charging == true)              // show status or menu depending on charging state 
-  {
-    printStatus();
-    calcRunTime();
-  } else {
-    printMenu(menuState);
-  }
-  printMessage();
-  
-  delay(1000/fractionOfSecond);     
+  delay(1000/fractionOfSecond/10);     
 }
