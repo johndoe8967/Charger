@@ -247,9 +247,10 @@ enum LiPoState {
   CHECK=0,
   CC,
   CV,
-  FULL
+  FULL,
+  WAIT
   };
-static LiPoState actLiPoState;
+static LiPoState actLiPoState = WAIT;
 static int delayCounter = 0;
 
 //******************************************
@@ -342,6 +343,9 @@ void calcChargeCurrent() {
         case FULL:
           refoutvalue = 0;
           message = "LiPo FULL       ";
+          actLiPoState = WAIT;
+          break;
+        case WAIT:
           break;
       }
       break;
