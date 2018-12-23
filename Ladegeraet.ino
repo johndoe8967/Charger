@@ -291,26 +291,24 @@ void calcChargeCurrent() {
           }
           break;
         case CC:
-          refoutvalue = chargeCurrent/mAPerinc;        // constant current als long as voltage is lower than the limit
+          refoutvalue = chargeCurrent/mAPerinc;         // constant current als long as voltage is lower than the limit
           if (cellVoltage > maxConstCurrentVoltageLiPo) {   
             actLiPoState = CV;
           }          
           break;
         case CV:
+          // regulate cell voltage by adjusting the current
           if (cellVoltage > (maxConstCurrentVoltageLiPo + 10)) {
-            refoutvalue--;                      // reduce charge current
-            if (refoutvalue < 0)
-            {
-              refoutvalue=0;
-            }
+            refoutvalue--;                              // reduce charge current
+            if (refoutvalue < 0) refoutvalue=0;         // prevent underrun of current
           }
           if (cellVoltage < (maxConstCurrentVoltageLiPo - 10)) {
-            refoutvalue++;
-            if (refoutvalue > chargeCurrent/mAPerinc) {
+            refoutvalue++;                              // increase charge current
+            if (refoutvalue > chargeCurrent/mAPerinc) { // prevent higher currents than allowed
               refoutvalue = chargeCurrent/mAPerinc;
             }
           }
-          if (cellVoltage > maxCellVoltageLiPo) {
+          if (cellVoltage > maxCellVoltageLiPo) {       // detect end of charge
             actLiPoState = FULL;
           }
           break;
