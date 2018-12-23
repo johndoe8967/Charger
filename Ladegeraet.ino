@@ -67,13 +67,12 @@ const int limitRuntime = 16*60;
   bool charging = false;
   
   int refoutvalue = 600/mAPerinc;// (I[mA]/3,94)  
-  int sensorValueI = 0;
-  int sensorValueU = 0;
   
 const int checkCurrentLiPo = 10;
 const int maxCellVoltageLiPo = 4230;
 const int maxConstCurrentVoltageLiPo = 4200;
       int cellVoltage  = 0;
+      int cellCurrent  = 0;
 
 enum LiPoState {
   CHECK=0,
@@ -209,11 +208,20 @@ static int messagedelay=0;
 //******************************************
 const char LiPoStateString[5][3] = {"Ch","CC","CV","FU","Wa"};
 void printStatus () {
+  
   printTime(0, 0);    
   lcd.setCursor(0, 1);
-  lcd.print(cellVoltage);                   // up to  5 char
+
+  if (cellVoltage < 100) lcd.print(" ");
+  if (cellVoltage < 1000) lcd.print(" ");
+  if (cellVoltage < 10000) lcd.print(" "); 
+  lcd.print(cellVoltage);                   //        5 char
   lcd.print("mV");                          //        2 char
-  lcd.print(int(sensorValueI*a));           // up to  4 char
+
+  if (cellCurrent < 10) lcd.print(" ");
+  if (cellCurrent < 100) lcd.print(" ");
+  if (cellCurrent < 1000) lcd.print(" ");
+  lcd.print(cellCurrent);                   //        4 char
   lcd.print("mA ");                         //        3 char
   lcd.print(LiPoStateString[actLiPoState]); //        2 char
   lcd.noBlink();
@@ -266,9 +274,10 @@ static int delayCounter = 0;
 // calculate cellvoltage by subtracting drop on current measurement
 //******************************************
 void getChargeState () {
-  sensorValueU = ADC_0.getADCVal();
-  sensorValueI = ADC_1.getADCVal();
-  cellVoltage = int(sensorValueU*n-sensorValueI*a);
+  int sensorValueU = ADC_0.getADCVal();
+  int sensorValueI = ADC_1.getADCVal();
+  cellCurrent = sensorValueI*a;
+  cellVoltage = int(sensorValueU*n-cellCurrent);
 }
 
 //******************************************
@@ -433,7 +442,7 @@ static int count = 0;
   
     processButtons();                 // read and process buttons
   
-    if (sensorValueI == 0) {          // check charging depending on current flow to detect a cell
+    if (cellCurrent == 0) {          // check charging depending on current flow to detect a cell
       charging = false;
     } else {
       if (charging == false) {        // check for start of charging positive edge
