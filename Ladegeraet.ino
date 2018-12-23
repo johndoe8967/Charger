@@ -266,21 +266,10 @@ static int delayCounter = 0;
 
 //******************************************
 // measure voltage and current
-// improve accuracy by measuring 10 times and average it
 // calculate cellvoltage by subtracting drop on current measurement
 //******************************************
-const int numberOfAverages = 20;
 void getChargeState () {
-  sensorValueU = 0;
-  sensorValueI = 0;
-//  for (int i=0; i < numberOfAverages; i++)
-//  {
-//    sensorValueU = (sensorValueU + analogRead(sensorPinU));
-//    sensorValueI = (sensorValueI + analogRead(sensorPinI));
-//  }  
-//  sensorValueU = (sensorValueU)/numberOfAverages;
   sensorValueU = ADC_0.getADCVal();
-//  sensorValueI = (sensorValueI)/numberOfAverages;
   sensorValueI = ADC_1.getADCVal();
   cellVoltage = int(sensorValueU*n-sensorValueI*a);
 }
