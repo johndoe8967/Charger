@@ -99,10 +99,10 @@ void initButtons() {
   pinMode(buttonDecPin, INPUT);
 }
 //******************************************
-//  getButtons read the pins 
+//  processButtons read the pins 
 //    and calc menuState, chargeCurrent and maxRuntime
 //******************************************
-void getButtons () {
+void processButtons () {
   buttonMode = !digitalRead(buttonModePin);
   buttonInc = !digitalRead(buttonIncPin);
   buttonDec = !digitalRead(buttonDecPin);
@@ -356,23 +356,20 @@ byte hours ;
 // calcRunTime in seconds, minutes and hours
 //******************************************
 void calcRunTime() {
-  if (millis() >= (previousTime))
+  if (millis() >= (previousTime))           // check if one second elapsed
   {
-     previousTime = previousTime + 1000;  // use 100000 for uS
-     seconds = seconds +1;
-     if (seconds == 60)
-      {
+     previousTime = previousTime + 1000;    // calculate timestamp for next second
+     seconds++;
+     if (seconds == 60) {
         seconds = 0;
-        minutes = minutes +1;
-        runtimeMinutes += 1;
+        minutes++;
+        runtimeMinutes++;
       }
-     if (minutes == 60)
-      {
+     if (minutes == 60) {
         minutes = 0;
-        hours = hours +1;
+        hours++;
       }
-     if (hours == 24)
-      {
+     if (hours == 24) {
         hours = 0;
       }  
    }
@@ -391,22 +388,18 @@ void clearRunTime() {
 void printTime(int col, int row) {
   lcd.setCursor(col, row);
   lcd.print("RunTime ");
-  if (hours<10)
-  {
-    lcd.print("0");  
-  }
+  
+  if (hours<10) lcd.print("0");     // print hours with 2 decimal places
   lcd.print(hours);
+  
   lcd.print(":"); 
-  if (minutes<10)
-  {
-    lcd.print("0");  
-  }
+  
+  if (minutes<10) lcd.print("0");   // print minutes with 2 decimal places  
   lcd.print(minutes);
+  
   lcd.print(":"); 
-  if (seconds<10)
-  {
-    lcd.print("0");  
-  }
+  
+  if (seconds<10) lcd.print("0");   // print seconds with 2 decimal places  
   lcd.print(seconds);
 }
 
@@ -415,22 +408,22 @@ void printTime(int col, int row) {
 //******************************************
 void loop() {
 
-  getChargeState();
-  calcChargeCurrent();
-  setChargeCurrent();
+  getChargeState();                 // read analog values and calculate cell values
+  calcChargeCurrent();              // calculate charge current and state
+  setChargeCurrent();               // output charge current
 
-  getButtons();
+  processButtons();                 // read and process buttons
 
-  if (sensorValueI == 0) {
+  if (sensorValueI == 0) {          // check charging depending on current flow to detect a cell
     charging = false;
   } else {
-    if (charging == false) {
-      initCharging();
-      charging = true;
+    if (charging == false) {        // check for start of charging positive edge
+      initCharging();               // init charging state
+      charging = true;              
     }
   }
   
-  if(charging == true) 
+  if(charging == true)              // show status or menu depending on charging state 
   {
     printStatus();
     calcRunTime();
@@ -438,6 +431,5 @@ void loop() {
     printMenu(menuState);
   }
   
-  
-  delay(1000/fractionOfSecond);
+  delay(1000/fractionOfSecond);     
 }
