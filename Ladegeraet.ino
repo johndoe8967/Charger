@@ -52,6 +52,7 @@ const float mAInPerInc = 1.08;
 // declaration of analog variables
   int cellVoltage  = 0;
   int cellCurrent  = 0;
+  unsigned long cellmAs = 0;
   int refoutvalue = 100/mAOutPerInc;// (I[mA]/3,94)  
 
 
@@ -308,10 +309,16 @@ static int delayCounter = 0;
 // calculate cellvoltage by subtracting drop on current measurement
 //******************************************
 void getChargeState () {
-  int sensorValueU = ADC_0.getADCVal();                 // get smoothed ADC values
+static unsigned long lastMeasureTime;
+  unsigned long actMeasureTime = millis();
+  unsigned long elapsedTime = actMeasureTime - lastMeasureTime;
+  lastMeasureTime = actMeasureTime;
+  
+  int sensorValueU = ADC_0.getADCVal();                   // get smoothed ADC values
   int sensorValueI = ADC_1.getADCVal();
-  cellCurrent = sensorValueI*mAInPerInc;                         // increments to mA
-  cellVoltage = int(sensorValueU*mVInPerInc-cellCurrent);        // increments to mV
+  cellCurrent = sensorValueI*mAInPerInc;                  // increments to mA
+  cellVoltage = int(sensorValueU*mVInPerInc-cellCurrent); // increments to mV
+  cellmAs += cellCurrent * elapsedTime;                   // calculate mA seconds
 }
 
 //******************************************
@@ -328,6 +335,7 @@ void initCharging() {
   actLiPoState=CHECK;
   delayCounter = 0;  
   runtimeMinutes = 0;
+  cellmAs = 0;
 }
 //******************************************
 // calculate charge current 
