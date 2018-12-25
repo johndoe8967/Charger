@@ -237,7 +237,13 @@ void printSplash () {
 const char LiPoStateString[6][3] = {"Ch","Cc","CC","CV","FU","Wa"};
 void printStatus () {
   
-  printTime(0, 0);    
+  printTime(0, 0);
+  
+  lcd.setCursor(8, 0);
+  float Ah = (float)cellmAs / 3600.0 / 1000.0;
+  lcd.print(Ah,3);
+  lcd.print("Ah");
+  
   lcd.setCursor(0, 1);
 
   if (cellVoltage < 100) lcd.print(" ");    // align cellvoltage
@@ -490,7 +496,6 @@ void clearRunTime() {
 //******************************************
 void printTime(int col, int row) {
   lcd.setCursor(col, row);
-  lcd.print("RunTime ");
   
   if (hours<10) lcd.print("0");     // print hours with 2 decimal places
   lcd.print(hours);
