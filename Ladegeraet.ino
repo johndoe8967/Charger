@@ -46,7 +46,7 @@ SmoothADC    ADC_1;        // SmoothADC instance for current
 
 // conversion factors for ADC increments to mA and mV
 const float mAOutPerInc = 4.18;       // 8bit PWM output -> 256*4,18 = 1070mA
-const float mVInPerInc = 22.24;       // (22,1=Spannungsteiler*Uref);
+const float mVInPerInc = 22.146;       // (22,1=Spannungsteiler*Uref);
 const float mAInPerInc = 1.08;
 
 // declaration of analog variables
@@ -155,7 +155,7 @@ void processButtons () {
           if (chargeCurrent > limitCurrent) chargeCurrent = limitCurrent;
           break;
         case Time:
-          maxRuntime++;                                       // increment charge runtime and limit to maximum
+          maxRuntime = maxRuntime+15;                                       // increment charge runtime and limit to maximum
           if (maxRuntime > limitRuntime) maxRuntime = limitRuntime;
           break;
         default:
@@ -175,7 +175,7 @@ void processButtons () {
           if (chargeCurrent < 0) chargeCurrent = 0;
           break;
         case Time:
-          maxRuntime--;                                       // decrement charge runtime and limit to positive values
+          maxRuntime = maxRuntime-15;                                       // decrement charge runtime and limit to positive values
           if (maxRuntime < 0) maxRuntime = 0;
           break;
         default:
@@ -239,10 +239,10 @@ void printStatus () {
   
   printTime(0, 0);
   
-  lcd.setCursor(8, 0);
-  float Ah = (float)cellmAs / 3600.0 / 1000.0;
-  lcd.print(Ah,3);
-  lcd.print("Ah");
+  lcd.setCursor(9, 0);
+  float Ah = (float)cellmAs / 3600000.0;
+  lcd.print(Ah,1);
+  lcd.print("mAh    ");
   
   lcd.setCursor(0, 1);
 
@@ -509,6 +509,7 @@ void printTime(int col, int row) {
   
   if (seconds<10) lcd.print("0");   // print seconds with 2 decimal places  
   lcd.print(seconds);
+  lcd.print(" ");
 }
 
 //******************************************
@@ -516,7 +517,7 @@ void printTime(int col, int row) {
 //******************************************
 void loop() {
 static int count = 0;
-static int delayMenu = 10*fractionOfSecond;            // delay 10s to show splash
+static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
   ADC_0.serviceADCPin();
   ADC_1.serviceADCPin();
 
@@ -546,8 +547,12 @@ static int delayMenu = 10*fractionOfSecond;            // delay 10s to show spla
         printStatus();
         calcRunTime();
       } else {
-        printMenu(menuState);
-        initRunTime();
+        if (message != 0) {
+          printStatus();        
+        } else {
+          printMenu(menuState);
+          initRunTime();
+        }
       }    
     }
     printMessage();    
