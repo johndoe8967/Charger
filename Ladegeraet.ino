@@ -52,7 +52,7 @@ const float mAInPerInc = 1.08;
 // declaration of analog variables
   int cellVoltage  = 0;
   int cellCurrent  = 0;
-  unsigned long cellmAs = 0;
+  unsigned long long cellmAs = 0;
   int refoutvalue = 100/mAOutPerInc;// (I[mA]/3,94)  
 
 
@@ -240,9 +240,9 @@ void printStatus () {
   printTime(0, 0);
   
   lcd.setCursor(9, 0);
-  float Ah = (float)cellmAs / 3600000.0;
-  lcd.print(Ah,1);
-  lcd.print("mAh    ");
+  float Ah = (float)cellmAs / 3600000000.0;
+  lcd.print(Ah,3);
+  lcd.print("Ah");
   
   lcd.setCursor(0, 1);
 
@@ -324,7 +324,7 @@ static unsigned long lastMeasureTime;
   int sensorValueI = ADC_1.getADCVal();
   cellCurrent = sensorValueI*mAInPerInc;                  // increments to mA
   cellVoltage = int(sensorValueU*mVInPerInc-cellCurrent); // increments to mV
-  cellmAs += cellCurrent * elapsedTime;                   // calculate mA seconds
+  cellmAs += cellCurrent * elapsedTime;                   // calculate mA mseconds
 }
 
 //******************************************
