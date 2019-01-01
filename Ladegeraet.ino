@@ -443,6 +443,8 @@ static int voltageDetectionCounter=0;
   if (runtimeMinutes >= maxRuntime) 
   {
     refoutvalue = 0;
+    message = "Timeout         ";                                 // set message for display
+
   }
 }
 
