@@ -435,13 +435,19 @@ static int slopeDetectionCounter=0;
             if (cellTempSlope < maxCellTempSlope) {       // if slope is falling again we reached the end of charge
               slopeDetectionCounter++;
               if (slopeDetectionCounter > (fractionOfSecond*4*60)) {
-                refoutvalue = 0;                          // switch of current
-                message = "NiMh FULL       ";             // set message for display
+                actChargeState = FULL;
               } 
             } else {
               slopeDetectionCounter = 0;
             }
           }
+          break;
+        case FULL:
+            refoutvalue = 0;                          // switch of current
+            message = "NiMh FULL       ";             // set message for display
+            actChargeState = WAIT;
+          break;  
+        case WAIT:
           break;
         default:
           refoutvalue = 0;                                        // switch of current
