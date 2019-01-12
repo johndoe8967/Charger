@@ -41,17 +41,26 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 const int refout = 9;
 const int sensorPinI = A0;
 const int sensorPinU = A1;
-SmoothADC    ADC_0;        // SmoothADC instance for voltage
-SmoothADC    ADC_1;        // SmoothADC instance for current
+const int sensorTemp = A2;
+SmoothADC ADC_0;        // SmoothADC instance for voltage
+SmoothADC ADC_1;        // SmoothADC instance for current
+SmoothADC ADC_2;        // SmoothADC instance for temperature
 
 // conversion factors for ADC increments to mA and mV
 const float mAOutPerInc = 4.18;       // 8bit PWM output -> 256*4,18 = 1070mA
 const float mVInPerInc = 22.146;       // (22,1=Spannungsteiler*Uref);
 const float mAInPerInc = 1.08;
+const float CPerInc = 0.547;
+const float COffset = -251.7;
+const float tempFilter = 0.01;
 
 // declaration of analog variables
   int cellVoltage  = 0;
   int cellCurrent  = 0;
+  float cellTemperature = 0.0;
+  float cellTempFiltered = 0.0;
+  float cellTempSlope = 0.0;
+  float maxCellTempSlope = 0.0;
   unsigned long long cellmAs = 0;
   int refoutvalue = 100/mAOutPerInc;// (I[mA]/3,94)  
 
@@ -76,7 +85,7 @@ enum LiPoState {
   CV,
   FULL,
   WAIT
-} actLiPoState = WAIT;
+} actChargeState = WAIT;
 
 
 // indicator if cell is connected and charge is in progress
@@ -196,8 +205,10 @@ void setup() {
 
   ADC_0.init(sensorPinU, TB_MS, 50);            // Init ADC0 attached to A0 with a 50ms acquisition period
   if (ADC_0.isDisabled()) { ADC_0.enable(); }
-  ADC_1.init(sensorPinI, TB_MS, 50);            // Init ADC0 attached to A0 with a 50ms acquisition period
+  ADC_1.init(sensorPinI, TB_MS, 50);            // Init ADC1 attached to A1 with a 50ms acquisition period
   if (ADC_1.isDisabled()) { ADC_1.enable(); }
+  ADC_2.init(sensorTemp, TB_MS, 50);            // Init ADC2 attached to A2 with a 50ms acquisition period
+  if (ADC_2.isDisabled()) { ADC_2.enable(); }
   
   pinMode(refout, OUTPUT);
   
@@ -234,30 +245,36 @@ void printSplash () {
 //******************************************
 // print status e.g. during charging
 //******************************************
-const char LiPoStateString[6][3] = {"Ch","Cc","CC","CV","FU","Wa"};
+const char chargeStateString[6][3] = {"Ch","Cc","CC","CV","FU","Wa"};
 void printStatus () {
-  
+static int counter;
+  counter++;
+    
   printTime(0, 0);
   
   lcd.setCursor(9, 0);
-  float Ah = (float)cellmAs / 3600000000.0;
-  lcd.print(Ah,3);
-  lcd.print("Ah");
-  
+  if (((counter/2) % 2) == 0) {                 // toggle every 2 seconds
+    float Ah = (float)cellmAs / 3600000000.0;   // show Ah
+    lcd.print(Ah,3);
+    lcd.print("Ah");
+  } else {
+    lcd.print(cellTempFiltered,1);              // show Temperature
+    lcd.print("°C");
+  }
   lcd.setCursor(0, 1);
 
-  if (cellVoltage < 100) lcd.print(" ");    // align cellvoltage
+  if (cellVoltage < 100) lcd.print(" ");        // align cellvoltage
   if (cellVoltage < 1000) lcd.print(" ");
   if (cellVoltage < 10000) lcd.print(" "); 
-  lcd.print(cellVoltage);                   //        5 char
-  lcd.print("mV");                          //        2 char
+  lcd.print(cellVoltage);                       //        5 char
+  lcd.print("mV");                              //        2 char
 
-  if (cellCurrent < 10) lcd.print(" ");     // align cellcurrent
+  if (cellCurrent < 10) lcd.print(" ");         // align cellcurrent
   if (cellCurrent < 100) lcd.print(" ");
   if (cellCurrent < 1000) lcd.print(" ");
-  lcd.print(cellCurrent);                   //        4 char
-  lcd.print("mA ");                         //        3 char
-  lcd.print(LiPoStateString[actLiPoState]); //        2 char
+  lcd.print(cellCurrent);                       //        4 char
+  lcd.print("mA ");                             //        3 char
+  lcd.print(chargeStateString[actChargeState]); //        2 char
   lcd.noBlink();
 }
 
@@ -322,9 +339,40 @@ static unsigned long lastMeasureTime;
   
   int sensorValueU = ADC_0.getADCVal();                   // get smoothed ADC values
   int sensorValueI = ADC_1.getADCVal();
+  int sensorValueT = ADC_2.getADCVal();
   cellCurrent = sensorValueI*mAInPerInc;                  // increments to mA
   cellVoltage = int(sensorValueU*mVInPerInc-cellCurrent); // increments to mV
   cellmAs += cellCurrent * elapsedTime;                   // calculate mA mseconds
+  
+  cellTemperature = sensorValueT*CPerInc + COffset;                               // calculate temperature from ADC value
+  if (cellTempFiltered == 0.0) { cellTempFiltered = cellTemperature; }            // Initialize filtered Temp value to reduce time at the beginning
+  cellTempFiltered = cellTempFiltered*(1-tempFilter)+cellTemperature*tempFilter;  // calculate new filtered value
+
+#define SlopeMeasureDistance 240
+#define SlopeMeasureInterfall 6
+#define numberOfLastTemps (SlopeMeasureDistance / SlopeMeasureInterfall)
+static float lastTemps[numberOfLastTemps];                    // array to store the old temperatures for slope calculation
+static unsigned long lastTimes[numberOfLastTemps];            // array to store the old measure timestimes for slope calculation
+
+  unsigned long seconds = actMeasureTime / 1000;              // calculate actual seconds 
+  if ((seconds % SlopeMeasureInterfall) == 0) {               // store a temperature measurement every minute
+    
+    // store filtered temp and timestape for slope calculation
+    auto slopeIndex = (seconds/SlopeMeasureInterfall) % SlopeMeasureDistance; 
+    lastTemps[slopeIndex] = cellTempFiltered;                 
+    lastTimes[slopeIndex] = lastMeasureTime;
+
+    // calculate slope index of oldest stored temp
+    int lastSlopeIndex = slopeIndex + 1;
+    if (lastSlopeIndex >= numberOfLastTemps) { lastSlopeIndex = 0;}
+
+    // calculate slope by differantion
+    cellTempSlope = (cellTempFiltered - lastTemps[lastSlopeIndex])/(actMeasureTime-lastTimes[lastSlopeIndex]);
+
+    // store max slope
+    if (cellTempSlope > maxCellTempSlope) { maxCellTempSlope = cellTempSlope;}
+  }
+
 }
 
 //******************************************
@@ -338,10 +386,27 @@ void setChargeCurrent() {
 // initialize charging 
 //******************************************
 void initCharging() {
-  actLiPoState=CHECK;
+  actChargeState=CHECK;
   delayCounter = 0;  
   runtimeMinutes = 0;
   cellmAs = 0;
+  maxCellTempSlope = 0.0;
+}
+
+void closedLoopCurrent() {
+  // closed loop current control
+  if (cellCurrent < (chargeCurrent-5)) {            // increment current output if measurement is below charge current
+    refoutvalue++;
+  }
+  if (cellCurrent > (chargeCurrent+5)) {            // decrement current output if measurement is above charge current 
+    refoutvalue--;
+  }
+  
+  if ((refoutvalue*mAOutPerInc - chargeCurrent) > 200) {  // terminate charge is set current is 200mA above charge current
+    refoutvalue = 0;                                      // switch of current output
+    message = "Current ERROR   ";                         // set message for display
+    actChargeState = WAIT;                                  // switch to WAIT state
+  }
 }
 //******************************************
 // calculate charge current 
@@ -354,10 +419,31 @@ static int voltageDetectionCounter=0;
       refoutvalue = chargeCurrent/mAOutPerInc;            // constant charge current during complete time
       break;
     case NiMh:
-      refoutvalue = chargeCurrent/mAOutPerInc;            // constant charge current during complete time
+      switch (actChargeState) {
+        case Cc:
+          refoutvalue = chargeCurrent/mAOutPerInc;        // constant current als long as voltage is lower than the limit   
+          actChargeState = CC;     
+          break;
+        case CC:
+          closedLoopCurrent();
+          if (cellTempFiltered > 45.0) {                  // allow maximum temp of 45°C before end of charge 
+              refoutvalue = 0;                            // switch of current
+              message = "NiMh overtemp   ";               // set message for display        
+          }
+          if (cellTempFiltered > 25.0) {                  // start temp slope detection above 25°C
+            if (cellTempSlope < maxCellTempSlope) {       // if slope is falling again we reached the end of charge
+                refoutvalue = 0;                          // switch of current
+                message = "NiMh FULL       ";             // set message for display                    
+            }          
+          }
+          break;
+        default:
+          refoutvalue = 0;                                        // switch of current
+          break;
+      }
       break;
     case LiPo:
-      switch (actLiPoState) {
+      switch (actChargeState) {
         case CHECK:
           refoutvalue = (chargeCurrent/mAOutPerInc)/10;   // min charge current is 10% of rated charge current
           delayCounter++;
@@ -365,38 +451,25 @@ static int voltageDetectionCounter=0;
             delayCounter = 0;   
             
             if (cellVoltage < maxConstCurrentVoltageLiPo) {       // cell is empty -> switch to constant current
-              actLiPoState = Cc;
+              actChargeState = Cc;
             } else if (cellVoltage < maxCellVoltageLiPo) {        // cell nearly full -> switch to constant voltage
-              actLiPoState = CV;
+              actChargeState = CV;
             } else {                                              // cell full -> switch end of charge
-              actLiPoState = FULL;
+              actChargeState = FULL;
             }         
           }
           break;
 
         case Cc:    // initialice Constant Current
           refoutvalue = chargeCurrent/mAOutPerInc;          // constant current als long as voltage is lower than the limit   
-          actLiPoState = CC;     
+          actChargeState = CC;     
           break;
         case CC:
-          // closed loop current control
-          if (cellCurrent < (chargeCurrent-5)) {            // increment current output if measurement is below charge current
-            refoutvalue++;
-          }
-          if (cellCurrent > (chargeCurrent+5)) {            // decrement current output if measurement is above charge current 
-            refoutvalue--;
-          }
-
-          if ((refoutvalue*mAOutPerInc - chargeCurrent) > 200) {  // terminate charge is set current is 200mA above charge current
-            refoutvalue = 0;                                      // switch of current output
-            message = "Current ERROR   ";                         // set message for display
-            actLiPoState = WAIT;                                  // switch to WAIT state
-          }
-          
+          closedLoopCurrent();          
           if (cellVoltage > maxConstCurrentVoltageLiPo) {         // detect state change because cellVoltage above constant current limit
             voltageDetectionCounter++;                            // delay state change 10s 
             if (voltageDetectionCounter > (10*fractionOfSecond)) {
-              actLiPoState = CV;                                  // next state constant voltage
+              actChargeState = CV;                                  // next state constant voltage
               voltageDetectionCounter = 0;                        // reset delay counter for next usage
             }
           }else {                                                 // reset state change because voltage to low again
@@ -416,12 +489,12 @@ static int voltageDetectionCounter=0;
             }
           }
           if (refoutvalue < ((chargeCurrent/mAOutPerInc)/10)) {   // stop charging at 10% of initial charge current
-            actLiPoState = FULL;
+            actChargeState = FULL;
           }
           if (cellVoltage > maxCellVoltageLiPo) {                 // detect end of charge bewcause cellVoltage above max cell voltage
             voltageDetectionCounter++;                            // delay state change 10s 
             if (voltageDetectionCounter > (10*fractionOfSecond)) {
-              actLiPoState = FULL;                                // next state FULL
+              actChargeState = FULL;                                // next state FULL
               voltageDetectionCounter = 0;                        // reset delay counter for next usage          
             }
           }else {                                                 // reset state change because voltage to low again
@@ -431,13 +504,14 @@ static int voltageDetectionCounter=0;
         case FULL:
           refoutvalue = 0;                                        // switch of current
           message = "LiPo FULL       ";                           // set message for display
-          actLiPoState = WAIT;                                    // next state WAIT
+          actChargeState = WAIT;                                    // next state WAIT
           break;
         case WAIT:
           break;
       }
       break;
     default:
+      refoutvalue = 0;                                        // switch of current
       break;
   }
   if (runtimeMinutes >= maxRuntime) 
