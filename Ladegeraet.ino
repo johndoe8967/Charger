@@ -431,10 +431,16 @@ static int voltageDetectionCounter=0;
               message = "NiMh overtemp   ";               // set message for display        
           }
           if (cellTempFiltered > 25.0) {                  // start temp slope detection above 25°C
+static int slopeDetectionCounter=0;                       
             if (cellTempSlope < maxCellTempSlope) {       // if slope is falling again we reached the end of charge
+              slopeDetectionCounter++;
+              if (slopeDetectionCounter > (fractionOfSecond*4*60)) {
                 refoutvalue = 0;                          // switch of current
-                message = "NiMh FULL       ";             // set message for display                    
-            }          
+                message = "NiMh FULL       ";             // set message for display
+              } 
+            } else {
+              slopeDetectionCounter = 0;
+            }
           }
           break;
         default:
