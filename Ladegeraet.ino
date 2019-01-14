@@ -249,17 +249,22 @@ const char chargeStateString[6][3] = {"Ch","Cc","CC","CV","FU","Wa"};
 void printStatus () {
 static int counter;
   counter++;
-    
-  printTime(0, 0);
+
   
-  lcd.setCursor(9, 0);
   if (((counter/2) % 2) == 0) {                 // toggle every 2 seconds
+    printTime(0, 0);
+    lcd.setCursor(9, 0);
     float Ah = (float)cellmAs / 3600000000.0;   // show Ah
     lcd.print(Ah,3);
     lcd.print("Ah");
   } else {
+    lcd.setCursor(0, 0);
+    lcd.print("                ");
+    lcd.setCursor(0, 0);
+    lcd.print(cellTempSlope*1000,2);
+    lcd.setCursor(9, 0);
     lcd.print(cellTempFiltered,1);              // show Temperature
-    lcd.print("°C");
+    lcd.print("\xb0""C");
   }
   lcd.setCursor(0, 1);
 
@@ -326,6 +331,11 @@ void printMenu (MenuState menuState) {
 // Charge related functions and variables
 //******************************************
 static int delayCounter = 0;
+#define SlopeMeasureDistance 240
+#define SlopeMeasureInterfall 24
+#define numberOfLastTemps (SlopeMeasureDistance / SlopeMeasureInterfall)
+static float lastTemps[numberOfLastTemps];                    // array to store the old temperatures for slope calculation
+static unsigned long lastTimes[numberOfLastTemps];            // array to store the old measure timestimes for slope calculation
 
 //******************************************
 // measure voltage and current
@@ -345,20 +355,15 @@ static unsigned long lastMeasureTime;
   cellmAs += cellCurrent * elapsedTime;                   // calculate mA mseconds
   
   cellTemperature = sensorValueT*CPerInc + COffset;                               // calculate temperature from ADC value
-  if (cellTempFiltered == 0.0) { cellTempFiltered = cellTemperature; }            // Initialize filtered Temp value to reduce time at the beginning
+  if (cellTempFiltered <= 15.0) { cellTempFiltered = cellTemperature; }           // Initialize filtered Temp value to reduce time at the beginning
   cellTempFiltered = cellTempFiltered*(1-tempFilter)+cellTemperature*tempFilter;  // calculate new filtered value
 
-#define SlopeMeasureDistance 240
-#define SlopeMeasureInterfall 6
-#define numberOfLastTemps (SlopeMeasureDistance / SlopeMeasureInterfall)
-static float lastTemps[numberOfLastTemps];                    // array to store the old temperatures for slope calculation
-static unsigned long lastTimes[numberOfLastTemps];            // array to store the old measure timestimes for slope calculation
 
   unsigned long seconds = actMeasureTime / 1000;              // calculate actual seconds 
   if ((seconds % SlopeMeasureInterfall) == 0) {               // store a temperature measurement every minute
     
     // store filtered temp and timestape for slope calculation
-    auto slopeIndex = (seconds/SlopeMeasureInterfall) % SlopeMeasureDistance; 
+    auto slopeIndex = (seconds/SlopeMeasureInterfall) % numberOfLastTemps;
     lastTemps[slopeIndex] = cellTempFiltered;                 
     lastTimes[slopeIndex] = lastMeasureTime;
 
@@ -391,6 +396,10 @@ void initCharging() {
   runtimeMinutes = 0;
   cellmAs = 0;
   maxCellTempSlope = 0.0;
+  for (int i = 0; i<numberOfLastTemps; i++) {
+    lastTemps[i] = 0.0;
+    lastTimes[i] = 0.0;
+  }
 }
 
 void closedLoopCurrent() {
@@ -414,6 +423,7 @@ void closedLoopCurrent() {
 //******************************************
 void calcChargeCurrent() {
 static int voltageDetectionCounter=0;  
+static float startTemperature = 0.0;
   switch (actType) {
     case NiCd:
       refoutvalue = chargeCurrent/mAOutPerInc;            // constant charge current during complete time
@@ -422,7 +432,12 @@ static int voltageDetectionCounter=0;
       switch (actChargeState) {
         case Cc:
           refoutvalue = chargeCurrent/mAOutPerInc;        // constant current als long as voltage is lower than the limit   
-          actChargeState = CC;     
+          startTemperature = cellTemperature;
+          voltageDetectionCounter++;
+          if (voltageDetectionCounter>(fractionOfSecond*2)) {
+            actChargeState = CC;
+            voltageDetectionCounter = 0;                        // reset delay counter for next usage
+          }
           break;
         case CC:
           closedLoopCurrent();
@@ -430,7 +445,7 @@ static int voltageDetectionCounter=0;
               refoutvalue = 0;                            // switch of current
               message = "NiMh overtemp   ";               // set message for display        
           }
-          if (cellTempFiltered > 25.0) {                  // start temp slope detection above 25°C
+          if (cellTempFiltered > startTemperature+3.0) {  // start temp slope detection above 25°C
 static int slopeDetectionCounter=0;                       
             if (cellTempSlope < maxCellTempSlope) {       // if slope is falling again we reached the end of charge
               slopeDetectionCounter++;
@@ -584,7 +599,8 @@ void clearRunTime() {
 //******************************************
 void printTime(int col, int row) {
   lcd.setCursor(col, row);
-  
+  lcd.print("                ");  
+  lcd.setCursor(col, row);
   if (hours<10) lcd.print("0");     // print hours with 2 decimal places
   lcd.print(hours);
   
