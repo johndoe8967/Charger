@@ -264,7 +264,7 @@ static int counter;
     lcd.print(cellTempSlope*1000,2);
     lcd.setCursor(9, 0);
     lcd.print(cellTempFiltered,1);              // show Temperature
-    lcd.print("\xb0""C");
+    lcd.print("C");
   }
   lcd.setCursor(0, 1);
 
