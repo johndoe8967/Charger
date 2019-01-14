@@ -608,6 +608,7 @@ static int count = 0;
 static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
   ADC_0.serviceADCPin();
   ADC_1.serviceADCPin();
+  ADC_2.serviceADCPin();
 
   count++;
   if ((count%10)==0) {
