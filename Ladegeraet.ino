@@ -193,7 +193,6 @@ void processButtons () {
       }
     }
   }
-
 }
 
 //******************************************
@@ -394,7 +393,10 @@ void initCharging() {
   runtimeMinutes = 0;
   cellmAs = 0;
   maxCellTempSlope = 0.0;
-  cellTempFiltered = cellTemperature;
+  auto deltaTemp = cellTempFiltered-cellTemperature;  // calculate difference of filtered temperature
+  if ((deltaTemp > 0.5) || (deltaTemp < -0.5)) {      // do initialize if not near the unfiltered temperature
+    cellTempFiltered = cellTemperature;
+  }
 }
 
 void closedLoopCurrent() {
