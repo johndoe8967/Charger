@@ -430,20 +430,30 @@ static float startTemperature = 0.0;
       break;
     case NiMh:
       switch (actChargeState) {
-        case Cc:
-          refoutvalue = chargeCurrent/mAOutPerInc;        // constant current als long as voltage is lower than the limit   
+		case CHECK:
           startTemperature = cellTemperature;
           voltageDetectionCounter++;
           if (voltageDetectionCounter>(fractionOfSecond*2)) {
-            actChargeState = CC;
+            unsigned long seconds = millis() / 1000;              // calculate actual seconds 
+            for (int i = (numberOfLastTemps-1); i==0; i--) {
+              lastTemps[i] = cellTemperature;
+              lastTimes[i] = seconds;
+              seconds -= SlopeMeasureInterfall;
+            }
+			      actChargeState = Cc;
             voltageDetectionCounter = 0;                        // reset delay counter for next usage
           }
+		  break;
+        case Cc:
+          refoutvalue = chargeCurrent/mAOutPerInc;        // constant current als long as voltage is lower than the limit   
+		      actChargeState = CC;
           break;
         case CC:
           closedLoopCurrent();
           if (cellTempFiltered > 45.0) {                  // allow maximum temp of 45°C before end of charge 
               refoutvalue = 0;                            // switch of current
-              message = "NiMh overtemp   ";               // set message for display        
+              message = "NiMh overtemp   ";               // set message for display   
+			        actChargeState = FULL;
           }
           if (cellTempFiltered > startTemperature+3.0) {  // start temp slope detection above 25°C
 static int slopeDetectionCounter=0;                       
