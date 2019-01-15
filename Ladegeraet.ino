@@ -107,6 +107,7 @@ const char *message = 0;        // pointer to const string for message display
 
 const int fractionOfSecond = 2;
 
+static int slopeDetectionCounter=0;
 
 //******************************************
 //  button related functions and variables
@@ -223,7 +224,7 @@ void printMessage() {
 static int messagedelay=0;
   if (message != 0) {                         // only if message is not empty
     messagedelay++;
-    if ((messagedelay/fractionOfSecond)%2) {  // blink message with 0,5Hz 
+    if ((messagedelay/fractionOfSecond*2)%(fractionOfSecond*2)) {  // blink message with 0,5Hz 
       // clear first row of display
       lcd.setCursor(0, 0);
       lcd.print("                ");
@@ -249,9 +250,8 @@ const char chargeStateString[6][3] = {"Ch","Cc","CC","CV","FU","Wa"};
 void printStatus () {
 static int counter;
   counter++;
-
   
-  if (((counter/2) % 2) == 0) {                 // toggle every 2 seconds
+  if (((counter/(fractionOfSecond*2)) % (fractionOfSecond*2)) == 0) {  // toggle every 2 seconds
     printTime(0, 0);
     lcd.setCursor(9, 0);
     float Ah = (float)cellmAs / 3600000000.0;   // show Ah
@@ -261,10 +261,12 @@ static int counter;
     lcd.setCursor(0, 0);
     lcd.print("                ");
     lcd.setCursor(0, 0);
-    lcd.print(cellTempSlope*1000,2);
-    lcd.setCursor(9, 0);
+    lcd.print(cellTempSlope*10000,5);
+    lcd.setCursor(8, 0);
     lcd.print(cellTempFiltered,1);              // show Temperature
     lcd.print("C");
+    lcd.setCursor(14,0);
+    lcd.print(slopeDetectionCounter);
   }
   lcd.setCursor(0, 1);
 
@@ -332,7 +334,7 @@ void printMenu (MenuState menuState) {
 //******************************************
 static int delayCounter = 0;
 #define SlopeMeasureDistance 240
-#define SlopeMeasureInterfall 24
+#define SlopeMeasureInterfall 6
 #define numberOfLastTemps (SlopeMeasureDistance / SlopeMeasureInterfall)
 static float lastTemps[numberOfLastTemps];                    // array to store the old temperatures for slope calculation
 static unsigned long lastTimes[numberOfLastTemps];            // array to store the old measure timestimes for slope calculation
@@ -355,7 +357,6 @@ static unsigned long lastMeasureTime;
   cellmAs += cellCurrent * elapsedTime;                   // calculate mA mseconds
   
   cellTemperature = sensorValueT*CPerInc + COffset;                               // calculate temperature from ADC value
-  if (cellTempFiltered <= 15.0) { cellTempFiltered = cellTemperature; }           // Initialize filtered Temp value to reduce time at the beginning
   cellTempFiltered = cellTempFiltered*(1-tempFilter)+cellTemperature*tempFilter;  // calculate new filtered value
 
 
@@ -373,9 +374,6 @@ static unsigned long lastMeasureTime;
 
     // calculate slope by differantion
     cellTempSlope = (cellTempFiltered - lastTemps[lastSlopeIndex])/(actMeasureTime-lastTimes[lastSlopeIndex]);
-
-    // store max slope
-    if (cellTempSlope > maxCellTempSlope) { maxCellTempSlope = cellTempSlope;}
   }
 
 }
@@ -396,10 +394,7 @@ void initCharging() {
   runtimeMinutes = 0;
   cellmAs = 0;
   maxCellTempSlope = 0.0;
-  for (int i = 0; i<numberOfLastTemps; i++) {
-    lastTemps[i] = 0.0;
-    lastTimes[i] = 0.0;
-  }
+  cellTempFiltered = cellTemperature;
 }
 
 void closedLoopCurrent() {
@@ -417,6 +412,7 @@ void closedLoopCurrent() {
     actChargeState = WAIT;                                  // switch to WAIT state
   }
 }
+
 //******************************************
 // calculate charge current 
 //  each type has an individual calculation
@@ -430,75 +426,80 @@ static float startTemperature = 0.0;
       break;
     case NiMh:
       switch (actChargeState) {
-		case CHECK:
-          startTemperature = cellTemperature;
+		    case CHECK:
           voltageDetectionCounter++;
-          if (voltageDetectionCounter>(fractionOfSecond*2)) {
-            unsigned long seconds = millis() / 1000;              // calculate actual seconds 
+          if (voltageDetectionCounter>(fractionOfSecond*2)) { // wait 2 seconds to measure stable values
+            voltageDetectionCounter = 0;                      // reset delay counter for next usage
+
+            // initialize lastTemp and lastTime array for slope calculation 
+            unsigned long seconds = millis() / 1000;          // calculate actual seconds 
             for (int i = (numberOfLastTemps-1); i==0; i--) {
-              lastTemps[i] = cellTemperature;
-              lastTimes[i] = seconds;
-              seconds -= SlopeMeasureInterfall;
+              seconds -= SlopeMeasureInterfall;               // calculate timestamps in the past
+              lastTemps[i] = cellTempFiltered;                // constant cellTemperature to calculate 0 slope at the beginning
+              lastTimes[i] = seconds;                         // store timestamp
             }
-			      actChargeState = Cc;
-            voltageDetectionCounter = 0;                        // reset delay counter for next usage
+            startTemperature = cellTempFiltered;              // set start temperature at beginning of charge
+            actChargeState = Cc;                              // next charge state is init for constant current
           }
-		  break;
+		      break;
         case Cc:
-          refoutvalue = chargeCurrent/mAOutPerInc;        // constant current als long as voltage is lower than the limit   
-		      actChargeState = CC;
+          refoutvalue = chargeCurrent/mAOutPerInc;            // constant current als long as voltage is lower than the limit   
+		      actChargeState = CC;                                // next state is charging at constant current
           break;
         case CC:
-          closedLoopCurrent();
-          if (cellTempFiltered > 45.0) {                  // allow maximum temp of 45°C before end of charge 
-              refoutvalue = 0;                            // switch of current
-              message = "NiMh overtemp   ";               // set message for display   
+          closedLoopCurrent();                                // closed loop control for charge current
+          if (cellTempFiltered > 45.0) {                      // allow maximum temp of 45°C before end of charge 
+              refoutvalue = 0;                                // switch of current
+              message = "NiMh overtemp   ";                   // set message for display   
 			        actChargeState = FULL;
           }
-          if (cellTempFiltered > startTemperature+3.0) {  // start temp slope detection above 25°C
-static int slopeDetectionCounter=0;                       
-            if (cellTempSlope < maxCellTempSlope) {       // if slope is falling again we reached the end of charge
-              slopeDetectionCounter++;
+          if (cellTempFiltered > startTemperature+3.0) {      // start temp slope detection above 25°C
+            // store max slope
+            if (cellTempSlope > maxCellTempSlope) { maxCellTempSlope = cellTempSlope;}
+            if (cellTempSlope < maxCellTempSlope) {           // if slope is falling again we reached the end of charge
+              slopeDetectionCounter++;                        // increment slopeDetectionCounter until 240s is reached
               if (slopeDetectionCounter > (fractionOfSecond*4*60)) {
-                actChargeState = FULL;
+                actChargeState = FULL;                        // next charge state is FULL
               } 
             } else {
-              slopeDetectionCounter = 0;
+              slopeDetectionCounter = 0;                      // new max slope found, restart timeout 
             }
+          } else {
+              slopeDetectionCounter = -1;                     // indicate that slope detection isn't started at all
           }
           break;
         case FULL:
-            refoutvalue = 0;                          // switch of current
-            message = "NiMh FULL       ";             // set message for display
-            actChargeState = WAIT;
+            refoutvalue = 0;                                  // switch of current
+            message = "NiMh FULL       ";                     // set message for display
+            actChargeState = WAIT;                            // next charge state is Waiting
           break;  
         case WAIT:
           break;
         default:
-          refoutvalue = 0;                                        // switch of current
+          refoutvalue = 0;                                    // switch of current
           break;
       }
       break;
     case LiPo:
       switch (actChargeState) {
         case CHECK:
-          refoutvalue = (chargeCurrent/mAOutPerInc)/10;   // min charge current is 10% of rated charge current
+          refoutvalue = (chargeCurrent/mAOutPerInc)/10;       // min charge current is 10% of rated charge current
           delayCounter++;
-          if (delayCounter >= fractionOfSecond*10) {      // delay for 10 seconds
+          if (delayCounter >= fractionOfSecond*10) {          // delay for 10 seconds
             delayCounter = 0;   
             
-            if (cellVoltage < maxConstCurrentVoltageLiPo) {       // cell is empty -> switch to constant current
+            if (cellVoltage < maxConstCurrentVoltageLiPo) {   // cell is empty -> switch to constant current
               actChargeState = Cc;
-            } else if (cellVoltage < maxCellVoltageLiPo) {        // cell nearly full -> switch to constant voltage
+            } else if (cellVoltage < maxCellVoltageLiPo) {    // cell nearly full -> switch to constant voltage
               actChargeState = CV;
-            } else {                                              // cell full -> switch end of charge
+            } else {                                          // cell full -> switch end of charge
               actChargeState = FULL;
             }         
           }
           break;
 
         case Cc:    // initialice Constant Current
-          refoutvalue = chargeCurrent/mAOutPerInc;          // constant current als long as voltage is lower than the limit   
+          refoutvalue = chargeCurrent/mAOutPerInc;            // constant current als long as voltage is lower than the limit   
           actChargeState = CC;     
           break;
         case CC:
@@ -506,7 +507,7 @@ static int slopeDetectionCounter=0;
           if (cellVoltage > maxConstCurrentVoltageLiPo) {         // detect state change because cellVoltage above constant current limit
             voltageDetectionCounter++;                            // delay state change 10s 
             if (voltageDetectionCounter > (10*fractionOfSecond)) {
-              actChargeState = CV;                                  // next state constant voltage
+              actChargeState = CV;                                // next state constant voltage
               voltageDetectionCounter = 0;                        // reset delay counter for next usage
             }
           }else {                                                 // reset state change because voltage to low again
@@ -531,7 +532,7 @@ static int slopeDetectionCounter=0;
           if (cellVoltage > maxCellVoltageLiPo) {                 // detect end of charge bewcause cellVoltage above max cell voltage
             voltageDetectionCounter++;                            // delay state change 10s 
             if (voltageDetectionCounter > (10*fractionOfSecond)) {
-              actChargeState = FULL;                                // next state FULL
+              actChargeState = FULL;                              // next state FULL
               voltageDetectionCounter = 0;                        // reset delay counter for next usage          
             }
           }else {                                                 // reset state change because voltage to low again
@@ -541,14 +542,14 @@ static int slopeDetectionCounter=0;
         case FULL:
           refoutvalue = 0;                                        // switch of current
           message = "LiPo FULL       ";                           // set message for display
-          actChargeState = WAIT;                                    // next state WAIT
+          actChargeState = WAIT;                                  // next state WAIT
           break;
         case WAIT:
           break;
       }
       break;
     default:
-      refoutvalue = 0;                                        // switch of current
+      refoutvalue = 0;                                            // switch of current
       break;
   }
   if (runtimeMinutes >= maxRuntime) 
