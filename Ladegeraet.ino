@@ -239,7 +239,7 @@ void printSplash () {
   lcd.setCursor(0, 0);
   lcd.print("Batteryloader   ");
   lcd.setCursor(0, 1);
-  lcd.print("max 19Vac V01.01");
+  lcd.print("max 19Vac V01.02");
 }
 
 //******************************************
