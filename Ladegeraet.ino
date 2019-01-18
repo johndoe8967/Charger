@@ -63,6 +63,7 @@ const float tempFilter = 0.01;
 // declaration of analog variables
   int cellVoltage  = 0;
   int cellCurrent  = 0;
+  float cellRI = 0;
   float cellTemperature = 0.0;
   float cellTempFiltered = 0.0;
   float cellTempSlope = 0.0;
@@ -70,6 +71,7 @@ const float tempFilter = 0.01;
   unsigned long long cellmAs = 0;
   int refoutvalue = 100/mAOutPerInc;// (I[mA]/3,94)  
 
+bool measureCellRI=false;
 
 // initialize charge current outut and limit
 const int limitCurrent = 1000;
@@ -262,6 +264,21 @@ static int counter;
     float Ah = (float)cellmAs / 3600000000.0;   // show Ah
     lcd.print(Ah,3);
     lcd.print("Ah");
+    
+    lcd.setCursor(0, 1);
+
+    if (cellVoltage < 100) lcd.print(" ");        // align cellvoltage
+    if (cellVoltage < 1000) lcd.print(" ");
+    if (cellVoltage < 10000) lcd.print(" "); 
+    lcd.print(cellVoltage);                       //        5 char
+    lcd.print("mV");                              //        2 char
+
+    if (cellCurrent < 10) lcd.print(" ");         // align cellcurrent
+    if (cellCurrent < 100) lcd.print(" ");
+    if (cellCurrent < 1000) lcd.print(" ");
+    lcd.print(cellCurrent);                       //        4 char
+    lcd.print("mA ");                             //        3 char
+    lcd.print(chargeStateString[actChargeState]); //        2 char
   } else {
     lcd.setCursor(0, 0);
     lcd.print("                ");
@@ -272,21 +289,13 @@ static int counter;
     lcd.print("C");
     lcd.setCursor(14,0);
     lcd.print(slopeDetectionCounter);
+
+    lcd.setCursor(0, 1);
+    lcd.print("                ");
+    lcd.setCursor(0, 1);
+    lcd.print(cellRI,3);
+    lcd.print("Ohm");
   }
-  lcd.setCursor(0, 1);
-
-  if (cellVoltage < 100) lcd.print(" ");        // align cellvoltage
-  if (cellVoltage < 1000) lcd.print(" ");
-  if (cellVoltage < 10000) lcd.print(" "); 
-  lcd.print(cellVoltage);                       //        5 char
-  lcd.print("mV");                              //        2 char
-
-  if (cellCurrent < 10) lcd.print(" ");         // align cellcurrent
-  if (cellCurrent < 100) lcd.print(" ");
-  if (cellCurrent < 1000) lcd.print(" ");
-  lcd.print(cellCurrent);                       //        4 char
-  lcd.print("mA ");                             //        3 char
-  lcd.print(chargeStateString[actChargeState]); //        2 char
   lcd.noBlink();
 }
 
@@ -344,6 +353,7 @@ static int delayCounter = 0;
 static float lastTemps[numberOfLastTemps];                    // array to store the old temperatures for slope calculation
 static unsigned long lastTimes[numberOfLastTemps];            // array to store the old measure timestimes for slope calculation
 
+#define CellRIMeasureInterfall 60
 //******************************************
 // measure voltage and current
 // calculate cellvoltage by subtracting drop on current measurement
@@ -385,6 +395,21 @@ static unsigned long lastMeasureTime;
     cellTempSlope = (cellTempFiltered - lastTemps[lastSlopeIndex])/(actMeasureTime-lastTimes[lastSlopeIndex]);
   }
 
+static int temprefoutvalue;
+static int tempcellVoltage;
+static int tempcellCurrent;
+  if (measureCellRI) {
+    measureCellRI = false;
+    refoutvalue = temprefoutvalue;
+    cellRI = (tempcellVoltage - cellVoltage) / (tempcellCurrent - cellCurrent); 
+  }
+  if ((seconds % CellRIMeasureInterfall) == 0) {
+    measureCellRI = true;  
+    temprefoutvalue = refoutvalue;
+    refoutvalue = 0;
+    tempcellVoltage = cellVoltage;
+    tempcellCurrent = cellCurrent;
+  }
 }
 
 //******************************************
@@ -658,7 +683,7 @@ static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
     processButtons();                 // read and process buttons
   
     if (cellCurrent == 0) {           // check charging depending on current flow to detect a cell
-      charging = false;
+      if (!measureCellRI) charging = false;
     } else {
       if (charging == false) {        // check for start of charging positive edge
         initCharging();               // init charging state
