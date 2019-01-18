@@ -50,8 +50,14 @@ SmoothADC ADC_2;        // SmoothADC instance for temperature
 const float mAOutPerInc = 4.18;       // 8bit PWM output -> 256*4,18 = 1070mA
 const float mVInPerInc = 22.146;       // (22,1=Spannungsteiler*Uref);
 const float mAInPerInc = 1.08;
+#define logSensor
+#ifdef logSensor
+const float CPerInc = -31.4;
+const float COffset = 238.6;
+#else
 const float CPerInc = 0.547;
 const float COffset = -251.7;
+#endif
 const float tempFilter = 0.01;
 
 // declaration of analog variables
@@ -354,8 +360,12 @@ static unsigned long lastMeasureTime;
   cellCurrent = sensorValueI*mAInPerInc;                  // increments to mA
   cellVoltage = int(sensorValueU*mVInPerInc-cellCurrent); // increments to mV
   cellmAs += cellCurrent * elapsedTime;                   // calculate mA mseconds
-  
-  cellTemperature = sensorValueT*CPerInc + COffset;                               // calculate temperature from ADC value
+
+#ifdef logSensor
+  cellTemperature = CPerInc*log(sensorValueT)+COffset;    // calculate temperature from ADC value
+#else
+  cellTemperature = sensorValueT*CPerInc + COffset;       // calculate temperature from ADC value
+#endif
   cellTempFiltered = cellTempFiltered*(1-tempFilter)+cellTemperature*tempFilter;  // calculate new filtered value
 
 
