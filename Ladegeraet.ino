@@ -9,6 +9,7 @@
   The circuit:
  * cell Current Input       at pin A0
  * cell voltage Input       at pin A1
+ * cell temperature Input   at pin A2
  * charge current output    at pin 9
  * Button select            at pin 6
  * Button +                 at pin 7
