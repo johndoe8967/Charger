@@ -53,11 +53,11 @@ const float mVInPerInc = 22.146;       // (22,1=Spannungsteiler*Uref);
 const float mAInPerInc = 1.08;
 #define logSensor
 #ifdef logSensor
-const float CPerInc = -31.4;
-const float COffset = 238.6;
+const float CPerInc = -30.8;          //43kOhm-> -31.4
+const float COffset = 232.7;          //43kOhm-> 238.6
 #else
-const float CPerInc = 0.547;
-const float COffset = -251.7;
+const float CPerInc = 0.547;          
+const float COffset = -251.7;         
 #endif
 const float tempFilter = 0.01;
 
@@ -688,6 +688,7 @@ static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
     } else {
       if (charging == false) {        // check for start of charging positive edge
         initCharging();               // init charging state
+        clearRunTime();               // Zeit zurücksetzen
         charging = true;              
       }
     }
