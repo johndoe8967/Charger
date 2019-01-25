@@ -233,6 +233,7 @@ void setup() {
   
   initButtons();
   printSplash();
+  Serial.begin(9600);
 }
 
 //******************************************
@@ -294,7 +295,7 @@ static int counter;
     lcd.setCursor(0, 0);
     lcd.print("                ");
     lcd.setCursor(0, 0);
-    lcd.print(cellTempSlope*10000,5);
+    lcd.print(cellTempSlope*10000,3);
     lcd.setCursor(8, 0);
     lcd.print(cellTempFiltered,1);              // show Temperature
     lcd.print("C");
@@ -431,7 +432,7 @@ static int tempcellCurrent;
 // set current 
 //******************************************
 void setChargeCurrent() {
-  analogWrite (refout,refoutvalue);  
+  analogWrite (refout,refoutvalue);
 }
 
 //******************************************
@@ -678,6 +679,11 @@ void printTime(int col, int row) {
   lcd.print(seconds);
   lcd.print(" ");
 }
+void monitorValues() {
+  Serial.print(cellVoltage);
+  Serial.print(" "); 
+  Serial.println(cellCurrent);
+}
 
 //******************************************
 // main loop
@@ -694,6 +700,7 @@ static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
     getChargeState();                 // read analog values and calculate cell values
     calcChargeCurrent();              // calculate charge current and state
     setChargeCurrent();               // output charge current
+    monitorValues();
   
     processButtons();                 // read and process buttons
   
