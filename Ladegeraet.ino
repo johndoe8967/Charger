@@ -85,8 +85,8 @@ const int limitRuntime = 16*60;
       int runtimeMinutes = 0;
       
 // initialize LiPo specific charge limits
-const int maxCellVoltageLiPo = 4230;
-const int maxConstCurrentVoltageLiPo = 4200;
+const int maxCellVoltageLiPo = 4240;
+const int maxConstCurrentVoltageLiPo = 4180;
 
 enum LiPoState {
   CHECK=0,
@@ -556,11 +556,11 @@ static float startTemperature = 0.0;
           break;
         case CV:
           // regulate cell voltage by adjusting the current
-          if (cellVoltage > (maxConstCurrentVoltageLiPo + 10)) {
+          if (cellVoltage > (maxConstCurrentVoltageLiPo + 20)) {
             refoutvalue--;                                        // reduce charge current
             if (refoutvalue < 0) refoutvalue=0;                   // prevent underrun of current
           }
-          if (cellVoltage < (maxConstCurrentVoltageLiPo - 10)) {
+          if (cellVoltage < (maxConstCurrentVoltageLiPo - 20)) {
             refoutvalue++;                                        // increase charge current
             if (refoutvalue > chargeCurrent/mAOutPerInc) {        // prevent higher currents than allowed
               refoutvalue = chargeCurrent/mAOutPerInc;
