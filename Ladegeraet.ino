@@ -70,7 +70,8 @@ const float tempFilter = 0.01;
   float cellTempSlope = 0.0;
   float maxCellTempSlope = 0.0;
   unsigned long long cellmAs = 0;
-  int refoutvalue = 100/mAOutPerInc;// (I[mA]/3,94)  
+const int batteryDetectCurrent = 100;
+  int refoutvalue = batteryDetectCurrent/mAOutPerInc;// (I[mA]/3,94)  
 
 bool measureCellRI=false;
 
@@ -151,6 +152,7 @@ void processButtons () {
   if (buttonMode || buttonInc || buttonDec) {
     if (message != 0) {
       message = 0;
+      refoutvalue = batteryDetectCurrent/mAOutPerInc;
       return;             // ignore button for 1 cycle to reset message without value change    
     }
   }
@@ -683,7 +685,7 @@ static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
   
     processButtons();                 // read and process buttons
   
-    if (cellCurrent == 0) {           // check charging depending on current flow to detect a cell
+    if (cellCurrent >= 10) {          // check charging depending on current flow to detect a cell
       if (!measureCellRI) charging = false;
     } else {
       if (charging == false) {        // check for start of charging positive edge
