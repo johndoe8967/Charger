@@ -383,7 +383,11 @@ static unsigned long lastMeasureTime;
   cellmAs += cellCurrent * elapsedTime;                   // calculate mA mseconds
 
 #ifdef logSensor
-  cellTemperature = CPerInc*log(sensorValueT)+COffset;    // calculate temperature from ADC value
+  if (sensorValueT >= 1) {
+    cellTemperature = CPerInc*log(sensorValueT)+COffset;    // calculate temperature from ADC value
+  } else  {
+    cellTemperature = -42.0;
+  }
 #else
   cellTemperature = sensorValueT*CPerInc + COffset;       // calculate temperature from ADC value
 #endif
@@ -693,7 +697,7 @@ static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
   
     processButtons();                 // read and process buttons
   
-    if (cellCurrent >= 10) {          // check charging depending on current flow to detect a cell
+    if (cellCurrent <= 10) {          // check charging depending on current flow to detect a cell
       if (!measureCellRI) charging = false;
     } else {
       if (charging == false) {        // check for start of charging positive edge
