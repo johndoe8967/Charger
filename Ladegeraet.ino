@@ -64,7 +64,9 @@ const float tempFilter = 0.01;
 // declaration of analog variables
   int cellVoltage  = 0;
   int cellCurrent  = 0;
+#ifdef measureRI
   float cellRI = 0;
+#endif
   float cellTemperature = 0.0;
   float cellTempFiltered = 0.0;
   float cellTempSlope = 0.0;
@@ -86,7 +88,7 @@ const int limitRuntime = 16*60;
       
 // initialize LiPo specific charge limits
 const int maxCellVoltageLiPo = 4240;
-const int maxConstCurrentVoltageLiPo = 4180;
+const int maxConstCurrentVoltageLiPo = 4170;
 
 enum LiPoState {
   CHECK=0,
@@ -259,7 +261,7 @@ void printSplash () {
   lcd.setCursor(0, 0);
   lcd.print("Batteryloader   ");
   lcd.setCursor(0, 1);
-  lcd.print("max 19Vac V01.02");
+  lcd.print("max 19Vac V01.03");
 }
 
 //******************************************
@@ -295,7 +297,7 @@ static int counter;
     lcd.setCursor(0, 0);
     lcd.print("                ");
     lcd.setCursor(0, 0);
-    lcd.print(cellTempSlope*10000,3);
+    lcd.print(cellTempSlope*10,3);
     lcd.setCursor(8, 0);
     lcd.print(cellTempFiltered,1);              // show Temperature
     lcd.print("C");
@@ -303,10 +305,12 @@ static int counter;
     lcd.print(slopeDetectionCounter);
 
     lcd.setCursor(0, 1);
+#ifdef measureRI
     lcd.print("                ");
     lcd.setCursor(0, 1);
     lcd.print(cellRI,3);
     lcd.print("Ohm");
+#endif
   }
   lcd.noBlink();
 }
@@ -408,9 +412,10 @@ static unsigned long lastMeasureTime;
     if (lastSlopeIndex >= numberOfLastTemps) { lastSlopeIndex = 0;}
 
     // calculate slope by differantion
-    cellTempSlope = (cellTempFiltered - lastTemps[lastSlopeIndex])/(actMeasureTime-lastTimes[lastSlopeIndex]);
+    cellTempSlope = (cellTempFiltered - lastTemps[lastSlopeIndex])/(actMeasureTime-lastTimes[lastSlopeIndex])*1000;
   }
 
+#ifdef measureRI
 static int temprefoutvalue;
 static int tempcellVoltage;
 static int tempcellCurrent;
@@ -426,6 +431,7 @@ static int tempcellCurrent;
     tempcellVoltage = cellVoltage;
     tempcellCurrent = cellCurrent;
   }
+#endif
 }
 
 //******************************************
@@ -475,7 +481,22 @@ static int voltageDetectionCounter=0;
 static float startTemperature = 0.0;
   switch (actType) {
     case NiCd:
-      refoutvalue = chargeCurrent/mAOutPerInc;            // constant charge current during complete time
+      switch (actChargeState) {
+        case CHECK:
+        case Cc:
+        case CC:
+          actChargeState = CC;
+          refoutvalue = chargeCurrent/mAOutPerInc;            // constant charge current during complete time
+          break;
+        case FULL:
+          refoutvalue = 0;                                  // switch of current
+          message = "NiCd FULL       ";                     // set message for display
+          actChargeState = WAIT;                            // next charge state is Waiting
+          break;
+        case WAIT:
+        default:
+          break;
+      }
       break;
     case NiMh:
       switch (actChargeState) {
@@ -504,7 +525,7 @@ static float startTemperature = 0.0;
           if (cellTempFiltered > 45.0) {                      // allow maximum temp of 45°C before end of charge 
               refoutvalue = 0;                                // switch of current
               message = "NiMh overtemp   ";                   // set message for display   
-			        actChargeState = FULL;
+			        actChargeState = WAIT;
           }
           if (cellTempFiltered > startTemperature+3.0) {      // start temp slope detection above 25°C
             // store max slope
@@ -559,7 +580,7 @@ static float startTemperature = 0.0;
           closedLoopCurrent();          
           if (cellVoltage > maxConstCurrentVoltageLiPo) {         // detect state change because cellVoltage above constant current limit
             voltageDetectionCounter++;                            // delay state change 10s 
-            if (voltageDetectionCounter > (10*fractionOfSecond)) {
+            if (voltageDetectionCounter > (1*fractionOfSecond)) {
               actChargeState = CV;                                // next state constant voltage
               voltageDetectionCounter = 0;                        // reset delay counter for next usage
             }
@@ -680,9 +701,26 @@ void printTime(int col, int row) {
   lcd.print(" ");
 }
 void monitorValues() {
-  Serial.print(cellVoltage);
+static int enableBits=0xff;
+
+  // if we get a valid byte, read analog ins:
+  if (Serial.available() >= 3) {
+    enableBits = Serial.parseInt();
+//    Serial.print("got message");
+//    Serial.print(enableBits);
+  }
+  if (enableBits & 0x01) Serial.print(cellVoltage);
   Serial.print(" "); 
-  Serial.println(cellCurrent);
+  if (enableBits & 0x02) Serial.print(refoutvalue*mAOutPerInc);
+  Serial.print(" "); 
+  if (enableBits & 0x04) Serial.print(cellCurrent);
+  Serial.print(" "); 
+  if (enableBits & 0x08) Serial.print(cellTempFiltered);
+  Serial.print(" "); 
+  if (enableBits & 0x10) Serial.print(cellTempSlope,5);
+  Serial.print(" "); 
+  if (enableBits & 0x20)Serial.print(actChargeState);
+  Serial.println();
 }
 
 //******************************************
@@ -704,7 +742,7 @@ static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
   
     processButtons();                 // read and process buttons
   
-    if (cellCurrent <= 10) {          // check charging depending on current flow to detect a cell
+    if (cellCurrent <= 5) {           // check charging depending on current flow to detect a cell
       if (!measureCellRI) charging = false;
     } else {
       if (charging == false) {        // check for start of charging positive edge
