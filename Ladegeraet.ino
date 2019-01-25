@@ -172,7 +172,11 @@ void processButtons () {
           }
           break;
         case Current:
-          chargeCurrent = chargeCurrent+10;                   // increment charge current and limit to maximum
+          if (chargeCurrent >= 100) {
+            chargeCurrent = chargeCurrent+100;                   // increment charge current and limit to maximum            
+          } else {
+            chargeCurrent = chargeCurrent+10;                   // increment charge current and limit to maximum
+          }
           if (chargeCurrent > limitCurrent) chargeCurrent = limitCurrent;
           break;
         case Time:
@@ -192,7 +196,11 @@ void processButtons () {
           }
           break;
         case Current:
-          chargeCurrent = chargeCurrent-10;                   // decrement charge current and limit to positive values
+          if (chargeCurrent > 100) {
+            chargeCurrent = chargeCurrent-100;                   // decrement charge current and limit to positive values            
+          } else {
+            chargeCurrent = chargeCurrent-10;                   // decrement charge current and limit to positive values
+          }
           if (chargeCurrent < 0) chargeCurrent = 0;
           break;
         case Time:
