@@ -351,12 +351,12 @@ void printMenu (MenuState menuState) {
 //******************************************
 static int delayCounter = 0;
 #define SlopeMeasureDistance 240
-#define SlopeMeasureInterfall 6
-#define numberOfLastTemps (SlopeMeasureDistance / SlopeMeasureInterfall)
+#define SlopeMeasureIntervall 6
+#define numberOfLastTemps (SlopeMeasureDistance / SlopeMeasureIntervall)
 static float lastTemps[numberOfLastTemps];                    // array to store the old temperatures for slope calculation
 static unsigned long lastTimes[numberOfLastTemps];            // array to store the old measure timestimes for slope calculation
 
-#define CellRIMeasureInterfall 60
+#define CellRIMeasureIntervall 60
 //******************************************
 // measure voltage and current
 // calculate cellvoltage by subtracting drop on current measurement
@@ -383,10 +383,10 @@ static unsigned long lastMeasureTime;
 
 
   unsigned long seconds = actMeasureTime / 1000;              // calculate actual seconds 
-  if ((seconds % SlopeMeasureInterfall) == 0) {               // store a temperature measurement every minute
+  if ((seconds % SlopeMeasureIntervall) == 0) {               // store a temperature measurement every minute
     
     // store filtered temp and timestape for slope calculation
-    auto slopeIndex = (seconds/SlopeMeasureInterfall) % numberOfLastTemps;
+    auto slopeIndex = (seconds/SlopeMeasureIntervall) % numberOfLastTemps;
     lastTemps[slopeIndex] = cellTempFiltered;                 
     lastTimes[slopeIndex] = lastMeasureTime;
 
@@ -406,7 +406,7 @@ static int tempcellCurrent;
     refoutvalue = temprefoutvalue;
     cellRI = (tempcellVoltage - cellVoltage) / (tempcellCurrent - cellCurrent); 
   }
-  if ((seconds % CellRIMeasureInterfall) == 0) {
+  if ((seconds % CellRIMeasureIntervall) == 0) {
     measureCellRI = true;  
     temprefoutvalue = refoutvalue;
     refoutvalue = 0;
@@ -474,7 +474,7 @@ static float startTemperature = 0.0;
             // initialize lastTemp and lastTime array for slope calculation 
             unsigned long seconds = millis() / 1000;          // calculate actual seconds 
             for (int i = (numberOfLastTemps-1); i==0; i--) {
-              seconds -= SlopeMeasureInterfall;               // calculate timestamps in the past
+              seconds -= SlopeMeasureIntervall;               // calculate timestamps in the past
               lastTemps[i] = cellTempFiltered;                // constant cellTemperature to calculate 0 slope at the beginning
               lastTimes[i] = seconds;                         // store timestamp
             }
