@@ -49,7 +49,7 @@ SmoothADC ADC_2;        // SmoothADC instance for temperature
 
 // conversion factors for ADC increments to mA and mV
 const float mAOutPerInc = 4.18;       // 8bit PWM output -> 256*4,18 = 1070mA
-const float mVInPerInc = 22.146;       // (22,1=Spannungsteiler*Uref);
+const float mVInPerInc = 15.879;       // (22,146=Spannungsteiler*Uref);
 const float mAInPerInc = 1.08;
 #define logSensor
 #ifdef logSensor
