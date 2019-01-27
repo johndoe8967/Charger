@@ -83,12 +83,12 @@ const int limitCurrent = 1000;
 
 // initialize charge run time and limit
 const int limitRuntime = 16*60;
-      int maxRuntime = 4*60;
+      int maxRuntime = 7*60;
       int runtimeMinutes = 0;
       
 // initialize LiPo specific charge limits
 const int maxCellVoltageLiPo = 4240;
-const int maxConstCurrentVoltageLiPo = 4170;
+const int maxConstCurrentVoltageLiPo = 4180;
 
 enum LiPoState {
   CHECK=0,
