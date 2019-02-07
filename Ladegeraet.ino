@@ -833,10 +833,12 @@ static int delayMenu = 5*fractionOfSecond;            // delay 5s to show splash
     if (cellCurrent <= 5) {           // check charging depending on current flow to detect a cell
       if (!measureCellRI) charging = false;
     } else {
-      if (charging == false) {        // check for start of charging positive edge
-        initCharging();               // init charging state
-        clearRunTime();               // Zeit zurücksetzen
-        charging = true;              
+      if (message == 0) {
+        if (charging == false) {        // check for start of charging positive edge
+          initCharging();               // init charging state
+          clearRunTime();               // Zeit zurücksetzen
+          charging = true;              
+        }
       }
     }
 
