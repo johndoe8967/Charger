@@ -534,9 +534,11 @@ static float startTemperature = 0.0;
       switch (actChargeState) {
         case CHECK:
         case Cc:
-        case CC:
-          actChargeState = CC;
           refoutvalue = chargeCurrent/mAOutPerInc;            // constant charge current during complete time
+          actChargeState = CC;
+          break;
+        case CC:
+          closedLoopCurrent();
           break;
         case FULL:
           refoutvalue = 0;                                  // switch of current
