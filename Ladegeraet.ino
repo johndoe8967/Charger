@@ -720,7 +720,7 @@ static float startTemperature = 0.0;
   {
     refoutvalue = 0;
     message = "Timeout         ";                                 // set message for display
-
+    actChargeState = WAIT;
   }
 }
 
