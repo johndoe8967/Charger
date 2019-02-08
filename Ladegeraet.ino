@@ -325,9 +325,6 @@ static int counter;
     lcd.setCursor(8, 0);
     lcd.print(cellTempFiltered,1);              // show Temperature
     lcd.print("C");
-    lcd.setCursor(14,0);
-    lcd.print(slopeDetectionCounter);
-
     lcd.setCursor(0, 1);
 #ifdef measureRI
     lcd.print("                ");
